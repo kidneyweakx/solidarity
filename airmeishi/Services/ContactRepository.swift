@@ -9,6 +9,7 @@ import Foundation
 import Combine
 
 /// Protocol defining contact management operations
+@MainActor
 protocol ContactRepositoryProtocol {
     func addContact(_ contact: Contact) -> CardResult<Contact>
     func updateContact(_ contact: Contact) -> CardResult<Contact>

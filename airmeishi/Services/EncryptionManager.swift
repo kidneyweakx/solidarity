@@ -147,11 +147,3 @@ class EncryptionManager {
     }
 }
 
-// MARK: - Extensions
-
-extension SymmetricKey {
-    /// Initialize SymmetricKey from Data
-    init(data: Data) {
-        self.init(data: data)
-    }
-}
