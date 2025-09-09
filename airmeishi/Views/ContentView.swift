@@ -277,28 +277,6 @@ struct ReceivedCardView: View {
 
 // MARK: - Placeholder Views
 
-struct ContactListView: View {
-    var body: some View {
-        NavigationView {
-            VStack {
-                Image(systemName: "person.2")
-                    .font(.system(size: 60))
-                    .foregroundColor(.gray)
-                
-                Text("Contacts")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Received business cards will appear here")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .navigationTitle("Contacts")
-        }
-    }
-}
-
 struct SettingsView: View {
     var body: some View {
         NavigationView {

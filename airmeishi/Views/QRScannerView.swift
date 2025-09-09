@@ -384,52 +384,7 @@ struct ScannedCardView: View {
 }
 
 // MARK: - Supporting Views
-
-struct ContactInfoRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 20)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text(value)
-                    .font(.body)
-            }
-            
-            Spacer()
-        }
-    }
-}
-
-struct SkillChip: View {
-    let skill: Skill
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(skill.name)
-                .font(.caption)
-                .fontWeight(.medium)
-            
-            Text(skill.proficiencyLevel.rawValue)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.blue.opacity(0.1))
-        .foregroundColor(.blue)
-        .cornerRadius(8)
-    }
-}
+// Shared components are now in SharedComponents.swift
 
 #Preview {
     QRScannerView()

@@ -197,3 +197,120 @@ extension BusinessCardField: Identifiable {
 extension SharingLevel: Identifiable {
     var id: String { self.rawValue }
 }
+
+// MARK: - Additional Extensions for Contact Management
+
+extension BusinessCard {
+    /// Get initials for profile display
+    var initials: String {
+        let components = name.components(separatedBy: " ")
+        let initials = components.compactMap { $0.first }.map { String($0) }
+        return initials.prefix(2).joined().uppercased()
+    }
+    
+    /// Get profile image URL if stored as URL string
+    var profileImageURL: URL? {
+        // In a real implementation, this might return a URL to a stored image
+        // For now, return nil as we're storing image data directly
+        return nil
+    }
+    
+    /// Generate vCard data for sharing
+    var vCardData: String {
+        var vCard = "BEGIN:VCARD\n"
+        vCard += "VERSION:3.0\n"
+        vCard += "FN:\(name)\n"
+        
+        if let title = title, !title.isEmpty {
+            vCard += "TITLE:\(title)\n"
+        }
+        
+        if let company = company, !company.isEmpty {
+            vCard += "ORG:\(company)\n"
+        }
+        
+        if let email = email, !email.isEmpty {
+            vCard += "EMAIL:\(email)\n"
+        }
+        
+        if let phone = phone, !phone.isEmpty {
+            vCard += "TEL:\(phone)\n"
+        }
+        
+        // Add skills as notes
+        if !skills.isEmpty {
+            let skillsText = skills.map { "\($0.name) (\($0.proficiencyLevel.rawValue))" }.joined(separator: ", ")
+            vCard += "NOTE:Skills: \(skillsText)\n"
+        }
+        
+        vCard += "END:VCARD\n"
+        return vCard
+    }
+    
+    /// Sample business card for previews
+    static var sample: BusinessCard {
+        return BusinessCard(
+            name: "John Doe",
+            title: "Senior iOS Developer",
+            company: "Tech Corp",
+            email: "john.doe@techcorp.com",
+            phone: "+1 (555) 123-4567",
+            skills: [
+                Skill(name: "Swift", category: "Programming", proficiencyLevel: .expert),
+                Skill(name: "SwiftUI", category: "UI Framework", proficiencyLevel: .advanced),
+                Skill(name: "Core Data", category: "Database", proficiencyLevel: .intermediate)
+            ],
+            categories: ["Technology", "Mobile Development"]
+        )
+    }
+}
+
+// MARK: - Mail Composer Support
+
+import MessageUI
+import UIKit
+import SwiftUI
+
+struct MailComposerView: UIViewControllerRepresentable {
+    let recipients: [String]
+    let subject: String
+    let body: String
+    
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let composer = MFMailComposeViewController()
+        composer.mailComposeDelegate = context.coordinator
+        composer.setToRecipients(recipients)
+        composer.setSubject(subject)
+        composer.setMessageBody(body, isHTML: false)
+        return composer
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {
+        // No updates needed
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            controller.dismiss(animated: true)
+        }
+    }
+}
+
+// MARK: - Share Sheet Support
+
+struct BusinessCardShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
+    }
+}
