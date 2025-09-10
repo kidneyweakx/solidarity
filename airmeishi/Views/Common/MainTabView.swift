@@ -16,7 +16,7 @@ struct MainTabView: View {
                 SharingTabView()
                     .tag(1)
                 
-                ContactListView()
+                ShoutoutView()
                     .tag(2)
                 
                 SettingsView()

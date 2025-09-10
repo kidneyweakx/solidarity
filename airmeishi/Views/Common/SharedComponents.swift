@@ -34,40 +34,6 @@ struct ContactInfoRow: View {
     }
 }
 
-/// Contact info row with action for ContactDetailView
-struct ActionableContactInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                    .frame(width: 20)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(value)
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
 
 
 
@@ -153,13 +119,6 @@ struct TagChip: View {
             value: "test@example.com"
         )
         
-        ActionableContactInfoRow(
-            icon: "phone.fill",
-            title: "Phone",
-            value: "+1 (555) 123-4567"
-        ) {
-            print("Phone tapped")
-        }
         
         MetadataRow(
             icon: "calendar",
