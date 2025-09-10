@@ -15,6 +15,7 @@ struct airmeishiApp: App {
     @StateObject private var contactRepository = ContactRepository.shared
     @StateObject private var proximityManager = ProximityManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
+    @StateObject private var themeManager = ThemeManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -23,6 +24,7 @@ struct airmeishiApp: App {
                 .environmentObject(contactRepository)
                 .environmentObject(proximityManager)
                 .environmentObject(deepLinkManager)
+                .environmentObject(themeManager)
                 .tint(.black)
                 .preferredColorScheme(.dark)
                 .onAppear {

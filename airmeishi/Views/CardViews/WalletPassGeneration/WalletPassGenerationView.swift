@@ -16,6 +16,7 @@ struct WalletPassGenerationView: View {
     @StateObject private var passKitManager = PassKitManager.shared
     @State private var showingAddToWallet = false
     @State private var generatedPassData: Data?
+    @State private var generatedPKPass: PKPass?
     @State private var showingError = false
     @State private var errorMessage = ""
     
@@ -121,8 +122,8 @@ struct WalletPassGenerationView: View {
             Text(errorMessage)
         }
         .sheet(isPresented: $showingAddToWallet) {
-            if let passData = generatedPassData {
-                AddToWalletView(passData: passData)
+            if let pass = generatedPKPass {
+                AddPassesControllerView(pass: pass)
             }
         }
     }
@@ -151,7 +152,8 @@ struct WalletPassGenerationView: View {
         
         switch result {
         case .success:
-            showingAddToWallet = true
+            generatedPKPass = passKitManager.lastGeneratedPass
+            showingAddToWallet = generatedPKPass != nil
         case .failure(let error):
             errorMessage = error.localizedDescription
             showingError = true
@@ -360,67 +362,19 @@ struct InfoRow: View {
     }
 }
 
-// MARK: - Add to Wallet View
+// MARK: - System Add Passes Controller
 
-struct AddToWalletView: View {
-    let passData: Data
+/// Presents the native PKAddPassesViewController when a valid PKPass is available
+struct AddPassesControllerView: UIViewControllerRepresentable {
+    let pass: PKPass
     
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.green)
-                    
-                    Text("Pass Generated Successfully!")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    Text("Your business card pass has been created and is ready to be added to Apple Wallet.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                
-                VStack(spacing: 12) {
-                    Text("Next Steps:")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("1. The pass will appear in your Wallet app")
-                        Text("2. You can share it by showing the QR code")
-                        Text("3. Others can scan it to get your contact info")
-                        Text("4. The pass will update automatically when you change your information")
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                
-                Spacer()
-                
-                Button("Done") {
-                    dismiss()
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
-            }
-            .padding()
-            .navigationTitle("Success")
-            .navigationBarTitleDisplayMode(.inline)
-        }
+    func makeUIViewController(context: Context) -> PKAddPassesViewController {
+        // NOTE: Requires a properly signed .pkpass. Current generator returns placeholder data.
+        // TODO: Implement signed .pkpass bundle (manifest.json + signature + images) and feed that here.
+        return PKAddPassesViewController(pass: pass) ?? PKAddPassesViewController()
     }
+    
+    func updateUIViewController(_ uiViewController: PKAddPassesViewController, context: Context) {}
 }
 
 #Preview {

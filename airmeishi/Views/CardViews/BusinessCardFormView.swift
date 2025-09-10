@@ -21,6 +21,7 @@ struct BusinessCardFormView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isLoading = false
+    @State private var isSimpleMode = true
     
     // Skills management
     @State private var newSkillName = ""
@@ -44,12 +45,21 @@ struct BusinessCardFormView: View {
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    Picker("Mode", selection: $isSimpleMode) {
+                        Text("Simple").tag(true)
+                        Text("Advanced").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                }
                 profileImageSection
                 basicInfoSection
                 contactInfoSection
-                skillsSection
-                categoriesSection
-                privacySection
+                if !isSimpleMode {
+                    skillsSection
+                    categoriesSection
+                    privacySection
+                }
             }
             .navigationTitle(isEditing ? "Edit Card" : "New Card")
             .navigationBarTitleDisplayMode(.inline)

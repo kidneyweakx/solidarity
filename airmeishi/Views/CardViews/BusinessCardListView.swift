@@ -10,12 +10,14 @@ import UIKit
 
 struct BusinessCardListView: View {
     @EnvironmentObject private var proximityManager: ProximityManager
+    @EnvironmentObject private var theme: ThemeManager
     @StateObject private var cardManager = CardManager.shared
     @State private var showingCreateCard = false
     @State private var showingOCRScanner = false
     @State private var featuredCard: BusinessCard?
     @State private var isFeatured = false
     @State private var isSharing = false
+    @State private var showingAppearance = false
     
     var body: some View {
         NavigationView {
@@ -37,6 +39,7 @@ struct BusinessCardListView: View {
                     Menu {
                         Button("Create Card") { showingCreateCard = true }
                         Button("Scan Card") { showingOCRScanner = true }
+                        Button("Appearance") { showingAppearance = true }
                     } label: { Image(systemName: "plus") }
                 }
             }
@@ -48,8 +51,12 @@ struct BusinessCardListView: View {
                     showingCreateCard = true
                 }
             }
+            .sheet(isPresented: $showingAppearance) {
+                NavigationView { AppearanceSettingsView() }
+                    .environmentObject(theme)
+            }
         }
-        .overlay(alignment: .bottom) { sharingBanner }
+        .overlay(alignment: .top) { sharingBannerTop }
     }
 }
 
@@ -62,22 +69,30 @@ private extension BusinessCardListView {
     }
     
     @ViewBuilder
-    var sharingBanner: some View {
+    var sharingBannerTop: some View {
         if proximityManager.isAdvertising {
             HStack(spacing: 8) {
                 Image(systemName: "dot.radiowaves.left.and.right")
-                    .foregroundColor(.green)
-                Text("Sharing \(cardDisplayName()) via NFC/AirDrop Nearby…")
-                    .font(.footnote)
+                    .foregroundColor(theme.cardAccent)
+                Text("Sharing Nearby")
+                    .font(.footnote.weight(.semibold))
                     .foregroundColor(.white)
                 Spacer()
                 Button("Stop") { proximityManager.stopAdvertising() }
                     .font(.footnote.weight(.semibold))
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.08)))
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(theme.cardAccent.opacity(0.25), lineWidth: 1)
+                    )
+                    .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
+            )
             .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .padding(.top, 10)
         }
     }
     
@@ -179,15 +194,18 @@ private struct WalletCardView: View {
     var onShare: () -> Void
     
     @State private var isFlipped = false
+    @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
+                .fill(
+                    LinearGradient(colors: [Color.white, theme.cardAccent.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.black.opacity(0.06), lineWidth: 0.5)
+                        .stroke(theme.cardAccent.opacity(0.35), lineWidth: 1)
                 )
                 .overlay(alignment: .topLeading) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -201,6 +219,7 @@ private struct WalletCardView: View {
                 }
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isFlipped)
+                .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
             
             HStack(spacing: 8) {
                 CategoryTag(text: category(for: card))
@@ -209,7 +228,7 @@ private struct WalletCardView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.black)
                         .padding(8)
-                        .background(Color.black.opacity(0.06))
+                        .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
                 .padding(10)
@@ -239,17 +258,19 @@ private struct WalletCardView: View {
 private struct HorizontalCardView: View {
     let card: BusinessCard
     var onShare: () -> Void = {}
+    @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LinearGradient(colors: [.white.opacity(0.12), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [theme.cardAccent.opacity(0.22), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(height: 180)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(theme.cardAccent.opacity(0.35), lineWidth: 1)
                 )
                 .overlay(alignment: .topTrailing) { CategoryTag(text: category(for: card)).padding(6) }
+                .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name)
@@ -275,6 +296,7 @@ private struct CardDeckView: View {
     @Binding var dragOffset: CGSize
     @Binding var isDragging: Bool
     let onFeature: (BusinessCard) -> Void
+    @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -327,13 +349,14 @@ private struct CardDeckView: View {
 // Simple right-top tag
 private struct CategoryTag: View {
     let text: String
+    @EnvironmentObject private var theme: ThemeManager
     var body: some View {
         Text(text)
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .foregroundColor(.white)
-            .background(Color.white.opacity(0.18))
+            .background(theme.cardAccent.opacity(0.25))
             .clipShape(Capsule())
             .padding(8)
     }
@@ -378,11 +401,12 @@ private struct DeckListView: View {
 }
 private struct VerticalCardCell: View {
     let card: BusinessCard
+    @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.08))
+                .fill(theme.cardAccent.opacity(0.16))
                 .frame(width: 56, height: 84)
                 .overlay(
                     Text(card.name.prefix(1))
@@ -402,7 +426,12 @@ private struct VerticalCardCell: View {
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(theme.cardAccent.opacity(0.18), lineWidth: 1)
+                )
         )
+        .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
     }
 }
 
