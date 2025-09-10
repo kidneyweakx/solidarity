@@ -63,7 +63,7 @@ struct FloatingTabBarBackdrop: View {
 
 enum MainAppTab: Int, CaseIterable {
     case glossary = 0
-    case events = 1
+    case sharing = 1
     case shoutout = 2
     case id = 3
 }
@@ -84,8 +84,8 @@ struct CustomFloatingTabBar: View {
                     selectedTab = MainAppTab.glossary.rawValue
                 }
                 Spacer(minLength: 16)
-                TabBarButton(systemName: "circle.grid.2x2", title: "Events", isSelected: selectedTab == MainAppTab.events.rawValue) {
-                    selectedTab = MainAppTab.events.rawValue
+                TabBarButton(systemName: "circle.grid.2x2", title: "Sharing", isSelected: selectedTab == MainAppTab.sharing.rawValue) {
+                    selectedTab = MainAppTab.sharing.rawValue
                 }
                 Spacer(minLength: 16)
                 TabBarButton(systemName: "bolt", title: "Shoutout", isSelected: selectedTab == MainAppTab.shoutout.rawValue) {
