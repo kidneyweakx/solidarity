@@ -19,7 +19,7 @@ struct MainTabView: View {
                 ShoutoutView()
                     .tag(2)
                 
-                SettingsView()
+                IDView()
                     .tag(3)
             }
             .tabViewStyle(DefaultTabViewStyle())

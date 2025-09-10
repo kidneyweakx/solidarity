@@ -195,6 +195,9 @@
 			);
 			mainGroup = F1133D752E70600A0097A2A4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F11342292E71DDDC0097A2A4 /* XCRemoteSwiftPackageReference "zkemail-swift-package" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
 			projectDirPath = "";
@@ -593,6 +596,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F11342292E71DDDC0097A2A4 /* XCRemoteSwiftPackageReference "zkemail-swift-package" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/zkmopro/zkemail-swift-package";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = F1133D762E70600A0097A2A4 /* Project object */;
 }
