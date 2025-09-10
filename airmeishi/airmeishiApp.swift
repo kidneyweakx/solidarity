@@ -23,6 +23,8 @@ struct airmeishiApp: App {
                 .environmentObject(contactRepository)
                 .environmentObject(proximityManager)
                 .environmentObject(deepLinkManager)
+                .tint(.black)
+                .preferredColorScheme(.dark)
                 .onAppear {
                     setupApp()
                 }

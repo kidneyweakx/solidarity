@@ -5,39 +5,31 @@ struct MainTabView: View {
     @State private var showingReceivedCard = false
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
+    @State private var selectedTab = 0
     
     var body: some View {
-        TabView {
-            BusinessCardListView()
-                .tabItem {
-                    Image(systemName: "person.crop.rectangle")
-                    Text("My Cards")
-                }
-            
-            ContactListView()
-                .tabItem {
-                    Image(systemName: "person.2")
-                    Text("Contacts")
-                }
-            
-            QRScannerTabView()
-                .tabItem {
-                    Image(systemName: "qrcode.viewfinder")
-                    Text("Scan")
-                }
-            
-            ProximitySharingTabView()
-                .tabItem {
-                    Image(systemName: "wave.3.right")
-                    Text("Share")
-                }
-            
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                BusinessCardListView()
+                    .tag(0)
+                
+                SharingTabView()
+                    .tag(1)
+                
+                ContactListView()
+                    .tag(2)
+                
+                SettingsView()
+                    .tag(3)
+            }
+            .tabViewStyle(DefaultTabViewStyle())
+            .toolbarBackground(.hidden, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
+
+            CustomFloatingTabBar(selectedTab: $selectedTab)
         }
+        .background(Color.black.ignoresSafeArea())
+        .tint(.white)
         .sheet(isPresented: $showingReceivedCard) {
             if let card = deepLinkManager.lastReceivedCard {
                 ReceivedCardView(card: card)
