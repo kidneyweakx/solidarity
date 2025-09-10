@@ -29,7 +29,6 @@ final class ZKEmailVerificationManager {
         guard let raw = String(data: data, encoding: .utf8) else {
             return .failure(.invalidData("EML not utf8"))
         }
-        // Naive parsing for From, Subject, Date
         let from = match(header: "From:", in: raw)
         let subject = match(header: "Subject:", in: raw) ?? ""
         let dateStr = match(header: "Date:", in: raw)
@@ -51,8 +50,6 @@ final class ZKEmailVerificationManager {
     
     func verifyLumaEmailWithZK(_ data: Data, srsPath: String?) -> CardResult<Bool> {
         #if canImport(ZKEmailSwift)
-        // Placeholder illustrating call into ZKEmailSwift
-        // In practice, construct inputs from parsed email headers and parts
         let inputs: [String: [String]] = [
             "header_storage": [],
             "header_len": ["0"],
@@ -75,7 +72,6 @@ final class ZKEmailVerificationManager {
             return .failure(.proofVerificationError("zkEmail failed: \(error.localizedDescription)"))
         }
         #else
-        // Fallback: naive verification (non-ZK) by checking luma domain markers
         guard let raw = String(data: data, encoding: .utf8) else {
             return .failure(.invalidData("EML not utf8"))
         }
@@ -85,7 +81,6 @@ final class ZKEmailVerificationManager {
     }
     
     private func match(header: String, in text: String) -> String? {
-        // Use NSRegularExpression directly to support multiline anchored match
         let pattern = "^" + NSRegularExpression.escapedPattern(for: header) + "\\s*(.*)$"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) else { return nil }
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
@@ -96,7 +91,6 @@ final class ZKEmailVerificationManager {
     }
     
     private func extractEventName(from subject: String) -> String? {
-        // Examples: "You're confirmed for <Event Name> — Luma"
         if let range = subject.range(of: " for ") {
             return String(subject[range.upperBound...]).replacingOccurrences(of: " — Luma", with: "").trimmingCharacters(in: CharacterSet.whitespaces)
         }
@@ -104,7 +98,6 @@ final class ZKEmailVerificationManager {
     }
     
     private func extractEventId(from raw: String) -> String? {
-        // Look for lu.ma links
         if let range = raw.range(of: "https://lu.ma/\\S+", options: .regularExpression) {
             let url = String(raw[range])
             return URL(string: url)?.lastPathComponent
