@@ -179,6 +179,34 @@ class CardManager: BusinessCardManagerProtocol, ObservableObject {
     func refreshCards() {
         loadCardsFromStorage()
     }
+
+    /// Reorder cards and persist the new order (encoded via `updatedAt` timestamps)
+    func reorderCards(to orderedIds: [UUID]) -> CardResult<Void> {
+        // Map current cards for quick lookup
+        let idToCard: [UUID: BusinessCard] = Dictionary(uniqueKeysWithValues: businessCards.map { ($0.id, $0) })
+        var newOrder: [BusinessCard] = []
+        for id in orderedIds {
+            if let card = idToCard[id] { newOrder.append(card) }
+        }
+        // Append any cards not present in orderedIds to preserve data
+        let remaining = businessCards.filter { !orderedIds.contains($0.id) }
+        newOrder.append(contentsOf: remaining)
+
+        // Encode order into updatedAt to maintain order on load (descending sort)
+        let now = Date()
+        for (index, var card) in newOrder.enumerated() {
+            // More recent date should appear earlier when sorted by updatedAt desc
+            card.updatedAt = now.addingTimeInterval(-Double(index))
+            if let idx = businessCards.firstIndex(where: { $0.id == card.id }) {
+                businessCards[idx] = card
+            }
+        }
+
+        // Re-sort to reflect the new timestamps
+        businessCards.sort { $0.updatedAt > $1.updatedAt }
+
+        return saveCardsToStorage()
+    }
     
     /// Get statistics about stored cards
     func getStatistics() -> CardStatistics {

@@ -18,6 +18,7 @@ struct BusinessCardListView: View {
     @State private var isFeatured = false
     @State private var isSharing = false
     @State private var showingAppearance = false
+    @State private var showingReorder = false
     
     var body: some View {
         NavigationView {
@@ -30,7 +31,13 @@ struct BusinessCardListView: View {
                     EmptyWalletView(onCreate: { showingCreateCard = true }, onScan: { showingOCRScanner = true })
                 } else {
                     WalletStackListView(cards: cardManager.businessCards,
-                                        onShare: { card in startSharing(card) })
+                                        onEdit: { card in beginEdit(card) },
+                                        onFocus: { card in
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                            featuredCard = card
+                            isFeatured = true
+                        }
+                    })
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -40,10 +47,16 @@ struct BusinessCardListView: View {
                         Button("Create Card") { showingCreateCard = true }
                         Button("Scan Card") { showingOCRScanner = true }
                         Button("Appearance") { showingAppearance = true }
+                        Button("Reorder Cards") { showingReorder = true }
                     } label: { Image(systemName: "plus") }
                 }
             }
-            .sheet(isPresented: $showingCreateCard) { BusinessCardFormView { _ in } }
+            .sheet(isPresented: $showingCreateCard) {
+                BusinessCardFormView(businessCard: featuredCard) { saved in
+                    // Keep focus on updated card
+                    featuredCard = saved
+                }
+            }
             .sheet(isPresented: $showingOCRScanner) {
                 OCRScannerView { extracted in
                     featuredCard = extracted
@@ -55,8 +68,15 @@ struct BusinessCardListView: View {
                 NavigationView { AppearanceSettingsView() }
                     .environmentObject(theme)
             }
+            .actionSheet(isPresented: $showingReorder) {
+                ActionSheet(title: Text("Reorder"), message: Text("Move a card by selecting it as first, second, etc."), buttons: [
+                    .default(Text("Move Selected to Top"), action: moveFeaturedToTop),
+                    .cancel()
+                ])
+            }
         }
         .overlay(alignment: .top) { sharingBannerTop }
+        .overlay { focusedOverlay }
     }
 }
 
@@ -66,6 +86,11 @@ private extension BusinessCardListView {
     func startSharing(_ card: BusinessCard) {
         proximityManager.stopAdvertising()
         proximityManager.startAdvertising(with: card, sharingLevel: .professional)
+    }
+
+    func beginEdit(_ card: BusinessCard) {
+        featuredCard = card
+        showingCreateCard = true
     }
     
     @ViewBuilder
@@ -99,71 +124,48 @@ private extension BusinessCardListView {
     func cardDisplayName() -> String {
         proximityManager.getSharingStatus().currentCard?.name ?? "Card"
     }
+
+    @ViewBuilder
+    var focusedOverlay: some View {
+        if isFeatured, let card = featuredCard {
+            Color.black.opacity(0.45).ignoresSafeArea()
+                .transition(.opacity)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                        isFeatured = false
+                    }
+                }
+            FocusedCardView(card: card,
+                             onEdit: { beginEdit(card) },
+                             onDelete: { deleteCard(card) },
+                             onClose: { withAnimation { isFeatured = false } })
+                .padding(.horizontal, 20)
+                .transition(.scale.combined(with: .opacity))
+        }
+    }
+    
+    func deleteCard(_ card: BusinessCard) {
+        _ = cardManager.deleteCard(id: card.id)
+        if featuredCard?.id == card.id { isFeatured = false }
+    }
+    
+    func moveFeaturedToTop() {
+        guard let id = featuredCard?.id else { return }
+        let ordered = [id] + cardManager.businessCards.filter { $0.id != id }.map { $0.id }
+        _ = cardManager.reorderCards(to: ordered)
+    }
 }
 
 // MARK: - Deck Container
 
-private struct WalletDeckContainer: View {
-    let cards: [BusinessCard]
-    @Binding var featuredCard: BusinessCard?
-    @Binding var isFeatured: Bool
-    let onShare: (BusinessCard) -> Void
-    
-    // Drag state for top card
-    @State private var dragOffset: CGSize = .zero
-    @State private var isDragging: Bool = false
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                if isFeatured, let card = featuredCard ?? cards.first {
-                    HorizontalCardView(card: card, onShare: { onShare(card) })
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 16)
-                        .transition(.asymmetric(insertion: .scale.combined(with: .opacity),
-                                                removal: .scale.combined(with: .opacity)))
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                                isFeatured = false
-                                dragOffset = .zero
-                            }
-                        }
-        } else {
-                    CardDeckView(cards: cards,
-                                 dragOffset: $dragOffset,
-                                 isDragging: $isDragging) { selected in
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                            featuredCard = selected
-                            isFeatured = true
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                }
-            }
-            
-            if let card = featuredCard, isFeatured {
-                CardDetailView(card: card)
-                    .padding(.horizontal, 16)
-            } else {
-                DeckListView(cards: cards) { tapped in
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                        featuredCard = tapped
-                        isFeatured = true
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 28)
-            }
-        }
-    }
-}
+// Removed old wallet deck container and list variants for simplicity
 
 // MARK: - Wallet Stack List (Apple Wallet-like)
 
 private struct WalletStackListView: View {
     let cards: [BusinessCard]
-    let onShare: (BusinessCard) -> Void
+    let onEdit: (BusinessCard) -> Void
+    let onFocus: (BusinessCard) -> Void
     
     private let cardHeight: CGFloat = 200
     private let overlap: CGFloat = 64
@@ -174,10 +176,11 @@ private struct WalletStackListView: View {
                 ForEach(Array(cards.enumerated()), id: \.offset) { pair in
                     let index = pair.offset
                     let card = pair.element
-                    WalletCardView(card: card, onShare: { onShare(card) })
+                    WalletCardView(card: card, onEdit: { onEdit(card) })
                         .frame(height: cardHeight)
                         .offset(y: CGFloat(index) * overlap)
                         .zIndex(Double(index))
+                        .onTapGesture { onFocus(card) }
                 }
             }
             .frame(height: CGFloat(max(cards.count - 1, 0)) * overlap + cardHeight)
@@ -191,7 +194,7 @@ private struct WalletStackListView: View {
 // A single large vertical wallet card with top-right category and edit/share control
 private struct WalletCardView: View {
     let card: BusinessCard
-    var onShare: () -> Void
+    var onEdit: () -> Void
     
     @State private var isFlipped = false
     @EnvironmentObject private var theme: ThemeManager
@@ -199,9 +202,7 @@ private struct WalletCardView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(colors: [Color.white, theme.cardAccent.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
+                .fill(perCardGradient(card: card))
                 .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -223,7 +224,7 @@ private struct WalletCardView: View {
             
             HStack(spacing: 8) {
                 CategoryTag(text: category(for: card))
-                Button(action: shareTapped) {
+                Button(action: editTapped) {
                     Image(systemName: "square.and.pencil")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.black)
@@ -236,13 +237,13 @@ private struct WalletCardView: View {
         }
     }
     
-    private func shareTapped() {
+    private func editTapped() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         withAnimation { isFlipped = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             withAnimation { isFlipped = false }
-            onShare()
+            onEdit()
         }
     }
     
@@ -250,6 +251,15 @@ private struct WalletCardView: View {
         if let company = card.company, !company.isEmpty { return company }
         if let title = card.title, !title.isEmpty { return title }
         return "Card"
+    }
+    
+    private func perCardGradient(card: BusinessCard) -> LinearGradient {
+        // deterministic hue by UUID hash for variety
+        let hash = card.id.uuidString.hashValue
+        let hue = Double(abs(hash % 360)) / 360.0
+        let base = Color(hue: hue, saturation: 0.55, brightness: 0.95)
+        let light = Color.white
+        return LinearGradient(colors: [light, base.opacity(0.22)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 
@@ -263,7 +273,7 @@ private struct HorizontalCardView: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LinearGradient(colors: [theme.cardAccent.opacity(0.22), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(perCardGradient(card: card))
                 .frame(height: 180)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -287,6 +297,14 @@ private struct HorizontalCardView: View {
         if let company = card.company, !company.isEmpty { return company }
         if let title = card.title, !title.isEmpty { return title }
         return "Card"
+    }
+    
+    private func perCardGradient(card: BusinessCard) -> LinearGradient {
+        let hash = card.id.uuidString.hashValue
+        let hue = Double(abs(hash % 360)) / 360.0
+        let c1 = Color(hue: hue, saturation: 0.65, brightness: 0.85)
+        let c2 = Color(hue: hue, saturation: 0.35, brightness: 0.25)
+        return LinearGradient(colors: [c1, c2.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 
@@ -432,6 +450,7 @@ private struct VerticalCardCell: View {
                 )
         )
         .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
+        // context menu could be wired via callbacks if needed
     }
 }
 
@@ -442,11 +461,11 @@ private struct EmptyWalletView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "person.crop.rectangle").font(.system(size: 64)).foregroundColor(.white.opacity(0.4))
-            Text("No Cards Yet").font(.title2).bold().foregroundColor(.white)
-            Text("Create or scan to get started").foregroundColor(.white.opacity(0.7))
+            Text("Business Card Not Found").font(.title2).bold().foregroundColor(.white)
+            Text("Add a card or scan to get started").foregroundColor(.white.opacity(0.7))
             HStack(spacing: 12) {
-                Button("Create", action: onCreate).buttonStyle(.borderedProminent)
-                Button("Scan", action: onScan).buttonStyle(.bordered)
+                Button("Add Card", action: onCreate).buttonStyle(.borderedProminent)
+                Button("Scan Card", action: onScan).buttonStyle(.bordered)
             }
         }
         .padding()
