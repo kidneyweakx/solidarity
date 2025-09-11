@@ -60,7 +60,7 @@ struct ShoutoutView: View {
     // MARK: - Header Section
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -84,7 +84,7 @@ struct ShoutoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.2))
+            .background(Color.white.opacity(0.08))
             .cornerRadius(12)
             .padding(.horizontal)
             
@@ -95,48 +95,12 @@ struct ShoutoutView: View {
     }
     
     private var communityStatsView: some View {
-        HStack(spacing: 20) {
-            VStack {
-                Image(systemName: "person.2")
-                    .font(.title2)
-                    .foregroundColor(.cyan)
-                
-                Text("\(chartService.filteredData.count)")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text("Users")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            VStack {
-                Image(systemName: "chart.scatter.3d")
-                    .font(.title2)
-                    .foregroundColor(.orange)
-                
-                Text("3D Map")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text("Active")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            VStack {
-                Image(systemName: "bolt.fill")
-                    .font(.title2)
-                    .foregroundColor(.yellow)
-                
-                Text("Shoutouts")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text("Ready")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
+        HStack(spacing: 16) {
+            statBlock(icon: "person.2", title: "Users", value: "\(chartService.filteredData.count)")
+            Spacer(minLength: 0)
+            statBlock(icon: "chart.scatter.3d", title: "Map", value: "Active")
+            Spacer(minLength: 0)
+            statBlock(icon: "bolt", title: "Shoutouts", value: "Ready")
         }
         .padding(.horizontal)
     }
@@ -146,20 +110,14 @@ struct ShoutoutView: View {
     private var chartVisualization: some View {
         GeometryReader { geometry in
             ZStack {
-                // 3D Chart Background
+                // Simple frame
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.white.opacity(0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
                     )
-                
+
                 // 3D Data Points
                 ForEach(chartService.filteredData) { dataPoint in
                     FloatingDataPoint(
@@ -182,10 +140,7 @@ struct ShoutoutView: View {
         VStack {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("(X) Events")
-                        .font(.caption)
-                        .foregroundColor(.cyan)
-                    Text("Activity Level")
+                    Text("X: Events")
                         .font(.caption2)
                         .foregroundColor(.gray)
                 }
@@ -193,10 +148,7 @@ struct ShoutoutView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("(Y) Type")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Text("Professional")
+                    Text("Y: Type")
                         .font(.caption2)
                         .foregroundColor(.gray)
                 }
@@ -206,10 +158,7 @@ struct ShoutoutView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("(Z) Character")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                    Text("Personality")
+                    Text("Z: Character")
                         .font(.caption2)
                         .foregroundColor(.gray)
                 }
@@ -224,31 +173,20 @@ struct ShoutoutView: View {
     
     private var actionButtons: some View {
         VStack(spacing: 16) {
-            // Pro Tips
-            proTipsSection
+            // Tips (simplified)
+            tipsSection
             
             // Main Action Button
-            Button(action: {
-                showingCreateShoutout = true
-            }) {
-                HStack {
-                    Image(systemName: "bolt.fill")
-                        .font(.title2)
-                    
-                    Text("Make my own shoutout!")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+            Button(action: { showingCreateShoutout = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "bolt")
+                    Text("Create shoutout")
                 }
-                .foregroundColor(.white)
+                .font(.headline)
+                .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    LinearGradient(
-                        colors: [Color.blue, Color.purple],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .padding(.vertical, 14)
+                .background(Color.white)
                 .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -256,35 +194,37 @@ struct ShoutoutView: View {
         .padding(.bottom)
     }
     
-    private var proTipsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("How to step up your game:")
+    private var tipsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Tips")
                 .font(.headline)
                 .foregroundColor(.white)
-            
             VStack(alignment: .leading, spacing: 4) {
-                Text("1. Create shoutouts →")
-                    .font(.body)
-                    .foregroundColor(.gray)
-                
-                Text("2. Start matching →")
-                    .font(.body)
-                    .foregroundColor(.gray)
-                
-                Text("3. Checkout events →")
-                    .font(.body)
-                    .foregroundColor(.gray)
+                Text("• Create a shoutout")
+                Text("• Start matching")
+                Text("• Explore events")
             }
-            
-            Text("Most importantly: you need to have FUN <3")
-                .font(.caption)
-                .foregroundColor(.pink)
-                .padding(.top, 4)
+            .font(.subheadline)
+            .foregroundColor(.gray)
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.white.opacity(0.05))
         .cornerRadius(12)
         .padding(.horizontal)
+    }
+
+    private func statBlock(icon: String, title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            Text(value)
+                .font(.headline)
+                .foregroundColor(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.gray)
+        }
     }
 }
 

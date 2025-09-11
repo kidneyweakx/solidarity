@@ -33,7 +33,7 @@ struct ShoutoutDetailView: View {
                 }
                 .padding()
             }
-            .navigationTitle("User Profile")
+            .navigationTitle("User")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -52,7 +52,7 @@ struct ShoutoutDetailView: View {
     // MARK: - Header Section
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Profile Image
             AsyncImage(url: user.profileImageURL) { image in
                 image
@@ -60,11 +60,10 @@ struct ShoutoutDetailView: View {
                     .aspectRatio(contentMode: .fill)
             } placeholder: {
                 Circle()
-                    .fill(Color.blue.gradient)
+                    .fill(Color.white.opacity(0.15))
                     .overlay {
                         Text(user.initials)
-                            .font(.largeTitle)
-                            .fontWeight(.medium)
+                            .font(.title)
                             .foregroundColor(.white)
                     }
             }
@@ -72,43 +71,40 @@ struct ShoutoutDetailView: View {
             .clipShape(Circle())
             .overlay(
                 Circle()
-                    .stroke(verificationColor, lineWidth: 3)
+                    .stroke(verificationColor.opacity(0.8), lineWidth: 2)
             )
-            .shadow(color: verificationColor.opacity(0.5), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
             
             // Name and Title
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Text(user.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                    .font(.headline)
                     .foregroundColor(.white)
                 
                 if !user.title.isEmpty {
                     Text(user.title)
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundColor(.gray)
                 }
                 
                 if !user.company.isEmpty {
                     Text(user.company)
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundColor(.gray)
                 }
             }
             
             // Verification Status
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: user.verificationStatus.systemImageName)
-                    .foregroundColor(verificationColor)
-                
                 Text(user.verificationStatus.displayName)
-                    .font(.caption)
-                    .foregroundColor(verificationColor)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(verificationColor.opacity(0.1))
-            .cornerRadius(16)
+            .font(.caption)
+            .foregroundColor(verificationColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(verificationColor.opacity(0.08))
+            .cornerRadius(12)
         }
     }
     
@@ -144,7 +140,7 @@ struct ShoutoutDetailView: View {
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.white.opacity(0.05))
         .cornerRadius(12)
     }
     
@@ -152,7 +148,7 @@ struct ShoutoutDetailView: View {
     
     private var informationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Contact Information")
+            Text("Contact")
                 .font(.headline)
                 .foregroundColor(.white)
             
@@ -173,7 +169,7 @@ struct ShoutoutDetailView: View {
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.white.opacity(0.05))
         .cornerRadius(12)
     }
     
@@ -181,7 +177,7 @@ struct ShoutoutDetailView: View {
     
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Tags & Interests")
+            Text("Tags")
                 .font(.headline)
                 .foregroundColor(.white)
             
@@ -199,15 +195,15 @@ struct ShoutoutDetailView: View {
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.2))
-                            .foregroundColor(.blue)
+                            .background(Color.white.opacity(0.06))
+                            .foregroundColor(.white)
                             .cornerRadius(8)
                     }
                 }
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.white.opacity(0.05))
         .cornerRadius(12)
     }
     
@@ -215,45 +211,31 @@ struct ShoutoutDetailView: View {
     
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            Button(action: {
-                showingCreateShoutout = true
-            }) {
-                HStack {
-                    Image(systemName: "bolt.fill")
-                        .font(.title2)
-                    
-                    Text("Send Shoutout")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+            Button(action: { showingCreateShoutout = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "bolt")
+                    Text("Send shoutout")
                 }
-                .foregroundColor(.white)
+                .font(.headline)
+                .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(
-                    LinearGradient(
-                        colors: [Color.blue, Color.purple],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .background(Color.white)
                 .cornerRadius(12)
             }
             
             Button(action: {
                 // TODO: Implement view profile action
             }) {
-                HStack {
-                    Image(systemName: "person.circle")
-                        .font(.title2)
-                    
-                    Text("View Full Profile")
-                        .font(.headline)
-                        .fontWeight(.medium)
+                HStack(spacing: 8) {
+                    Image(systemName: "person")
+                    Text("View profile")
                 }
-                .foregroundColor(.blue)
+                .font(.subheadline)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.blue.opacity(0.1))
+                .background(Color.white.opacity(0.06))
                 .cornerRadius(12)
             }
         }
@@ -288,7 +270,6 @@ struct PositionRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)
-                    .fontWeight(.medium)
                     .foregroundColor(.white)
                 
                 Text(description)
@@ -300,7 +281,6 @@ struct PositionRow: View {
             
             Text(value)
                 .font(.headline)
-                .fontWeight(.bold)
                 .foregroundColor(color)
         }
     }
@@ -314,13 +294,12 @@ struct ShoutoutInfoRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundColor(.white)
                 .frame(width: 20)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)
-                    .fontWeight(.medium)
                     .foregroundColor(.white)
                 
                 Text(value)

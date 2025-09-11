@@ -24,6 +24,7 @@ struct OCRScannerView: View {
     @State private var showingResults = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var showSettingsButton = false
     
     let onCardExtracted: (BusinessCard) -> Void
     
@@ -76,7 +77,16 @@ struct OCRScannerView: View {
                 loadSelectedImage(newItem)
             }
             .alert("Error", isPresented: $showingAlert) {
-                Button("OK") { }
+                if showSettingsButton {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    Button("OK", role: .cancel) { showSettingsButton = false }
+                } else {
+                    Button("OK") { }
+                }
             } message: {
                 Text(alertMessage)
             }
@@ -235,13 +245,15 @@ struct OCRScannerView: View {
                     if granted {
                         showingCamera = true
                     } else {
-                        alertMessage = "Camera access is required to scan business cards"
+                        alertMessage = "Camera access is required to scan business cards. Please enable it in Settings."
+                        showSettingsButton = true
                         showingAlert = true
                     }
                 }
             }
         case .denied, .restricted:
             alertMessage = "Camera access is required. Please enable it in Settings."
+            showSettingsButton = true
             showingAlert = true
         @unknown default:
             alertMessage = "Camera access is required to scan business cards"

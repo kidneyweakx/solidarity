@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
 /// QR code scanner view with camera preview and scan handling
 struct QRScannerView: View {
@@ -16,6 +17,8 @@ struct QRScannerView: View {
     @State private var showingScannedCard = false
     @State private var showingError = false
     @State private var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
+    @State private var showingPermissionAlert = false
+    @State private var permissionAlertMessage = ""
     
     @Environment(\.dismiss) private var dismiss
     
@@ -86,7 +89,7 @@ struct QRScannerView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            startScanning()
+            ensureCameraPermissionAndStart()
         }
         .onDisappear {
             qrManager.stopScanning()
@@ -112,13 +115,23 @@ struct QRScannerView: View {
         .alert("Scan Error", isPresented: $showingError) {
             Button("Try Again") {
                 qrManager.scanError = nil
-                startScanning()
+                ensureCameraPermissionAndStart()
             }
             Button("Cancel") {
                 dismiss()
             }
         } message: {
             Text(qrManager.scanError?.localizedDescription ?? "Unknown error occurred")
+        }
+        .alert("Camera Permission", isPresented: $showingPermissionAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text(permissionAlertMessage)
         }
     }
     
@@ -133,6 +146,30 @@ struct QRScannerView: View {
         case .failure(let error):
             qrManager.scanError = error
             showingError = true
+        }
+    }
+    
+    private func ensureCameraPermissionAndStart() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            startScanning()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        startScanning()
+                    } else {
+                        permissionAlertMessage = "Camera access is required to scan QR codes. Please enable it in Settings."
+                        showingPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            permissionAlertMessage = "Camera access is required to scan QR codes. Please enable it in Settings."
+            showingPermissionAlert = true
+        @unknown default:
+            permissionAlertMessage = "Camera access is required to scan QR codes."
+            showingPermissionAlert = true
         }
     }
     

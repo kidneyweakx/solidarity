@@ -53,5 +53,7 @@
 	</dict>
 	<key>NSContactsUsageDescription</key>
 	<string>This app needs access to contacts to save business card information.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to scan QR codes and business cards.</string>
 </dict>
 </plist>

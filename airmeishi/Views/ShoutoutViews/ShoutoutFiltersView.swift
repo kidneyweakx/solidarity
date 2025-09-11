@@ -18,7 +18,7 @@ struct ShoutoutFiltersView: View {
                 Section("Search") {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.secondary)
                         
                         TextField("Search users...", text: $chartService.searchQuery)
                             .onChange(of: chartService.searchQuery) { _, newValue in
@@ -31,7 +31,7 @@ struct ShoutoutFiltersView: View {
                 Section("Event Activity Level") {
                     HStack {
                         Image(systemName: "clear")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                             .frame(width: 20)
                         
                         Text("All Activity Levels")
@@ -40,7 +40,7 @@ struct ShoutoutFiltersView: View {
                         
                         if chartService.selectedEventType == nil {
                             Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
+                                .foregroundColor(.accentColor)
                         }
                     }
                     .contentShape(Rectangle())
@@ -52,23 +52,13 @@ struct ShoutoutFiltersView: View {
                     ForEach(EventType.allCases) { eventType in
                         HStack {
                             Circle()
-                                .fill(Color.cyan)
-                                .frame(width: 12, height: 12)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(eventType.rawValue)
-                                    .font(.subheadline)
-                                
-                                Text("Score: \(String(format: "%.1f", eventType.minScore)) - \(String(format: "%.1f", eventType.maxScore))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
+                                .fill(Color.white.opacity(0.4))
+                                .frame(width: 10, height: 10)
+                            Text(eventType.rawValue)
                             Spacer()
-                            
                             if chartService.selectedEventType == eventType {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.accentColor)
                             }
                         }
                         .contentShape(Rectangle())
@@ -83,7 +73,7 @@ struct ShoutoutFiltersView: View {
                 Section("Character Type") {
                     HStack {
                         Image(systemName: "clear")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                             .frame(width: 20)
                         
                         Text("All Character Types")
@@ -92,7 +82,7 @@ struct ShoutoutFiltersView: View {
                         
                         if chartService.selectedCharacterType == nil {
                             Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
+                                .foregroundColor(.accentColor)
                         }
                     }
                     .contentShape(Rectangle())
@@ -104,23 +94,13 @@ struct ShoutoutFiltersView: View {
                     ForEach(CharacterType.allCases) { characterType in
                         HStack {
                             Circle()
-                                .fill(Color.green)
-                                .frame(width: 12, height: 12)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(characterType.rawValue)
-                                    .font(.subheadline)
-                                
-                                Text("Score: \(String(format: "%.1f", characterType.minScore)) - \(String(format: "%.1f", characterType.maxScore))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
+                                .fill(Color.white.opacity(0.4))
+                                .frame(width: 10, height: 10)
+                            Text(characterType.rawValue)
                             Spacer()
-                            
                             if chartService.selectedCharacterType == characterType {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.accentColor)
                             }
                         }
                         .contentShape(Rectangle())
