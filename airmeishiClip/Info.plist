@@ -59,5 +59,7 @@
 	<array>
 		<string>_airmeishi-share._tcp.</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
