@@ -8,9 +8,12 @@
 import SwiftUI
 
 struct MatchingOrbitView: View {
+    @StateObject private var proximityManager = ProximityManager.shared
     @State private var rotateOuter: Bool = false
     @State private var rotateMiddle: Bool = false
     @State private var rotateInner: Bool = false
+    @State private var showNearbySheet: Bool = false
+    @State private var showPeerCardSheet: Bool = false
     
     var body: some View {
         ZStack {
@@ -25,13 +28,26 @@ struct MatchingOrbitView: View {
                 .stroke(Color.white.opacity(0.2), lineWidth: 2)
                 .padding(84)
             
-            // Center planet
-            Circle()
-                .fill(Color.white.opacity(0.25))
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
-                )
+            // Center planet (tappable)
+            Button(action: { showNearbySheet = true }) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.25))
+                        .frame(width: 96, height: 96)
+                        .overlay(
+                            Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        )
+                    VStack(spacing: 2) {
+                        Text("Nearby")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                        Text("\(proximityManager.nearbyPeers.count)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
             
             // Orbiting satellites
             orbit(radiusPadding: 4, size: 18)
@@ -44,10 +60,37 @@ struct MatchingOrbitView: View {
                 .rotationEffect(.degrees(rotateInner ? 360 : 0))
                 .animation(.linear(duration: 7).repeatForever(autoreverses: false), value: rotateInner)
         }
+        // Top overlay removed; center planet handles interactions
         .onAppear {
             rotateOuter = true
             rotateMiddle = true
             rotateInner = true
+        }
+        .sheet(isPresented: $showNearbySheet) {
+            NearbyPeersSheet(
+                peers: proximityManager.nearbyPeers,
+                connectedCount: proximityManager.getSharingStatus().connectedPeersCount,
+                onViewLatestCard: {
+                    if proximityManager.receivedCards.last != nil {
+                        showPeerCardSheet = true
+                    }
+                }
+            )
+        }
+        .sheet(isPresented: $showPeerCardSheet) {
+            if let card = proximityManager.receivedCards.last {
+                ReceivedCardView(card: card)
+            } else {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                    Text("Waiting for peer's card...")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                }
+                .padding()
+            }
         }
     }
     
@@ -74,6 +117,72 @@ struct MatchingOrbitView: View {
         Circle()
             .fill(Color.white.opacity(0.8))
             .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Nearby Peers Sheet
+
+private struct NearbyPeersSheet: View {
+    let peers: [ProximityPeer]
+    let connectedCount: Int
+    let onViewLatestCard: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                if peers.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text("No nearby peers yet")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(UIColor.systemBackground))
+                } else {
+                    List(peers) { peer in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(peer.cardName ?? peer.name)
+                                .font(.headline)
+                            HStack(spacing: 8) {
+                                if let title = peer.cardTitle { Text(title).font(.subheadline).foregroundColor(.secondary) }
+                                if let company = peer.cardCompany { Text(company).font(.subheadline).foregroundColor(.secondary) }
+                            }
+                            Text(peer.status.rawValue)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .listStyle(.insetGrouped)
+                }
+                if connectedCount > 0 {
+                    Button(action: onViewLatestCard) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.badge.checkmark")
+                            Text("View latest received card")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding()
+                }
+            }
+            .navigationTitle("Nearby Peers")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }
 
