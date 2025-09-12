@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import PassKit
 
 struct BusinessCardListView: View {
     @EnvironmentObject private var proximityManager: ProximityManager
@@ -19,6 +20,9 @@ struct BusinessCardListView: View {
     @State private var isSharing = false
     @State private var showingAppearance = false
     @State private var showingReorder = false
+    @State private var showingAddPass = false
+    @State private var pendingPass: PKPass?
+    @State private var alertMessage: String?
     
     var body: some View {
         NavigationView {
@@ -32,6 +36,7 @@ struct BusinessCardListView: View {
                 } else {
                     WalletStackListView(cards: cardManager.businessCards,
                                         onEdit: { card in beginEdit(card) },
+                                        onAddToWallet: { card in addToWallet(card) },
                                         onFocus: { card in
                         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                             featuredCard = card
@@ -68,6 +73,14 @@ struct BusinessCardListView: View {
                 NavigationView { AppearanceSettingsView() }
                     .environmentObject(theme)
             }
+            .sheet(isPresented: $showingAddPass) {
+                if let pass = pendingPass {
+                    AddPassesControllerView(pass: pass)
+                }
+            }
+            .alert("Error", isPresented: .init(get: { alertMessage != nil }, set: { _ in alertMessage = nil })) {
+                Button("OK", role: .cancel) { alertMessage = nil }
+            } message: { Text(alertMessage ?? "") }
             .actionSheet(isPresented: $showingReorder) {
                 ActionSheet(title: Text("Reorder"), message: Text("Move a card by selecting it as first, second, etc."), buttons: [
                     .default(Text("Move Selected to Top"), action: moveFeaturedToTop),
@@ -91,6 +104,23 @@ private extension BusinessCardListView {
     func beginEdit(_ card: BusinessCard) {
         featuredCard = card
         showingCreateCard = true
+    }
+    
+    func addToWallet(_ card: BusinessCard) {
+        let result = PassKitManager.shared.generatePass(for: card, sharingLevel: .professional)
+        switch result {
+        case .success(let passData):
+            // Create PKPass and present add UI
+            do {
+                let pass = try PKPass(data: passData)
+                pendingPass = pass
+                showingAddPass = true
+            } catch {
+                alertMessage = "Failed to prepare Wallet pass: \(error.localizedDescription)"
+            }
+        case .failure(let err):
+            alertMessage = err.localizedDescription
+        }
     }
     
     @ViewBuilder
@@ -165,6 +195,7 @@ private extension BusinessCardListView {
 private struct WalletStackListView: View {
     let cards: [BusinessCard]
     let onEdit: (BusinessCard) -> Void
+    let onAddToWallet: (BusinessCard) -> Void
     let onFocus: (BusinessCard) -> Void
     
     private let cardHeight: CGFloat = 200
@@ -176,7 +207,7 @@ private struct WalletStackListView: View {
                 ForEach(Array(cards.enumerated()), id: \.offset) { pair in
                     let index = pair.offset
                     let card = pair.element
-                    WalletCardView(card: card, onEdit: { onEdit(card) })
+                    WalletCardView(card: card, onEdit: { onEdit(card) }, onAddToWallet: { onAddToWallet(card) })
                         .frame(height: cardHeight)
                         .offset(y: CGFloat(index) * overlap)
                         .zIndex(Double(index))
@@ -195,6 +226,7 @@ private struct WalletStackListView: View {
 private struct WalletCardView: View {
     let card: BusinessCard
     var onEdit: () -> Void
+    var onAddToWallet: () -> Void
     
     @State private var isFlipped = false
     @EnvironmentObject private var theme: ThemeManager
@@ -233,6 +265,15 @@ private struct WalletCardView: View {
                         .clipShape(Circle())
                 }
                 .padding(10)
+                Button(action: addPassTapped) {
+                    Image(systemName: "wallet.pass")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.black)
+                        .padding(8)
+                        .background(theme.cardAccent.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .padding(10)
             }
         }
     }
@@ -245,6 +286,12 @@ private struct WalletCardView: View {
             withAnimation { isFlipped = false }
             onEdit()
         }
+    }
+    
+    private func addPassTapped() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        onAddToWallet()
     }
     
     private func category(for card: BusinessCard) -> String {
