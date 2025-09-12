@@ -215,6 +215,49 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         receivedCards.removeAll()
     }
     
+    /// Check if the app has the required network permissions
+    func checkNetworkPermissions() -> Bool {
+        // Check if Info.plist contains required keys
+        guard let infoPlist = Bundle.main.infoDictionary else {
+            print("Info.plist not found")
+            return false
+        }
+        
+        // Check for NSLocalNetworkUsageDescription (try both formats)
+        let hasLocalNetworkDescription = infoPlist["NSLocalNetworkUsageDescription"] as? String != nil ||
+                                       infoPlist["INFOPLIST_KEY_NSLocalNetworkUsageDescription"] as? String != nil
+        
+        guard hasLocalNetworkDescription else {
+            print("NSLocalNetworkUsageDescription not found in Info.plist")
+            return false
+        }
+        
+        // Check for NSBonjourServices (try both formats)
+        let bonjourServices: [String]?
+        if let directServices = infoPlist["NSBonjourServices"] as? [String] {
+            bonjourServices = directServices
+        } else if let keyServices = infoPlist["INFOPLIST_KEY_NSBonjourServices"] as? [String] {
+            bonjourServices = keyServices
+        } else {
+            bonjourServices = nil
+        }
+        
+        guard let services = bonjourServices else {
+            print("NSBonjourServices not found in Info.plist")
+            return false
+        }
+        
+        // Check if our service type is declared
+        let expectedService = "_airmeishi-share._tcp."
+        let hasService = services.contains(expectedService)
+        
+        if !hasService {
+            print("Expected service \(expectedService) not found in NSBonjourServices: \(services)")
+        }
+        
+        return hasService
+    }
+    
     // MARK: - Private Methods
     
     private func createDiscoveryInfo(for card: BusinessCard, level: SharingLevel) -> [String: String] {
@@ -283,6 +326,61 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
                 self.lastError = error
             }
         }
+    }
+    
+    private func createDetailedErrorMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        
+        // Handle specific NSNetServices errors
+        if nsError.domain == "NSNetServicesErrorDomain" {
+            switch nsError.code {
+            case -72008: // NSNetServicesMissingRequiredConfigurationError
+                return "Network configuration missing. Please ensure the app has proper network permissions in Settings > Privacy & Security > Local Network."
+            case -72000: // NSNetServicesUnknownError
+                return "Unknown network error occurred. Please try restarting the app."
+            case -72001: // NSNetServicesCollisionError
+                return "Network service name collision. Please try again in a moment."
+            case -72002: // NSNetServicesNotFoundError
+                return "Network service not found. Please check your network connection."
+            case -72003: // NSNetServicesActivityInProgress
+                return "Network operation already in progress. Please wait and try again."
+            case -72004: // NSNetServicesBadArgumentError
+                return "Invalid network configuration. Please contact support."
+            case -72005: // NSNetServicesInvalidError
+                return "Invalid network service. Please restart the app."
+            case -72006: // NSNetServicesTimeoutError
+                return "Network operation timed out. Please check your connection and try again."
+            case -72007: // NSNetServicesInProgressError
+                return "Network operation in progress. Please wait and try again."
+            default:
+                return "Network error (\(nsError.code)): \(error.localizedDescription)"
+            }
+        }
+        
+        // Handle MultipeerConnectivity specific errors
+        if nsError.domain == "MultipeerConnectivityErrorDomain" {
+            switch nsError.code {
+            case 0: // MCErrorUnknown
+                return "Unknown Multipeer Connectivity error. Please try again."
+            case 1: // MCErrorNotConnected
+                return "Not connected to any peers. Please ensure devices are nearby and try again."
+            case 2: // MCErrorInvalidParameter
+                return "Invalid connection parameters. Please restart the app."
+            case 3: // MCErrorUnsupported
+                return "This feature is not supported on this device."
+            case 4: // MCErrorTimedOut
+                return "Connection timed out. Please ensure devices are nearby and try again."
+            case 5: // MCErrorCancelled
+                return "Connection was cancelled. Please try again."
+            case 6: // MCErrorUnavailable
+                return "Multipeer Connectivity is not available. Please check your device settings."
+            default:
+                return "Multipeer Connectivity error (\(nsError.code)): \(error.localizedDescription)"
+            }
+        }
+        
+        // Generic error message
+        return "Failed to start browsing: \(error.localizedDescription)"
     }
 }
 
@@ -355,7 +453,8 @@ extension ProximityManager: MCNearbyServiceAdvertiserDelegate {
     
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
         DispatchQueue.main.async { [weak self] in
-            self?.lastError = .sharingError("Failed to start advertising: \(error.localizedDescription)")
+            let errorMessage = self?.createDetailedErrorMessage(for: error) ?? "Failed to start advertising: \(error.localizedDescription)"
+            self?.lastError = .sharingError(errorMessage)
             self?.isAdvertising = false
         }
         
@@ -394,7 +493,8 @@ extension ProximityManager: MCNearbyServiceBrowserDelegate {
     
     func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         DispatchQueue.main.async { [weak self] in
-            self?.lastError = .sharingError("Failed to start browsing: \(error.localizedDescription)")
+            let errorMessage = self?.createDetailedErrorMessage(for: error) ?? "Failed to start browsing: \(error.localizedDescription)"
+            self?.lastError = .sharingError(errorMessage)
             self?.isBrowsing = false
         }
         

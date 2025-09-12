@@ -20,6 +20,7 @@ struct ProximitySharingView: View {
     @State private var selectedSharingLevel: SharingLevel = .professional
     @State private var isMatching: Bool = false
     @State private var showQRScanner: Bool = false
+    @State private var showCreateCard: Bool = false
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
     
@@ -48,6 +49,23 @@ struct ProximitySharingView: View {
                 }
                 
         VStack(spacing: 12) {
+                    if cardManager.businessCards.isEmpty {
+                        VStack(spacing: 8) {
+                            Text("You need a card to start matching.")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                            Button(action: { showCreateCard = true }) {
+                                Text("Create Card")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                        }
+                    }
+                    
                     Button(action: toggleMatching) {
                         Text(isMatching ? "Stop Matching" : "Start Matching")
                 .font(.headline)
@@ -119,6 +137,12 @@ struct ProximitySharingView: View {
         .sheet(isPresented: $showQRScanner) {
             QRScannerView()
         }
+        .sheet(isPresented: $showCreateCard) {
+            BusinessCardFormView { saved in
+                selectedCard = saved
+                showCreateCard = false
+            }
+        }
         .alert("Error", isPresented: .init(
             get: { errorMessage != nil },
             set: { _ in errorMessage = nil }
@@ -130,7 +154,18 @@ struct ProximitySharingView: View {
         .onReceive(proximityManager.$lastError) { error in
             if let error = error { errorMessage = error.localizedDescription }
         }
+        .onChange(of: errorMessage) { _, newValue in
+            if newValue != nil {
+                proximityManager.debugLogInfoPlist()
+            }
+        }
+        .onReceive(cardManager.$businessCards) { cards in
+            if selectedCard == nil {
+                selectedCard = cards.first
+            }
+        }
         .onAppear {
+            proximityManager.debugLogInfoPlist()
             if selectedCard == nil { selectedCard = cardManager.businessCards.first }
         }
     }
@@ -142,7 +177,9 @@ struct ProximitySharingView: View {
             stopMatchingIfNeeded()
             return
         }
+        
         guard let card = selectedCard else { return }
+        
         proximityManager.startAdvertising(with: card, sharingLevel: selectedSharingLevel)
         proximityManager.startBrowsing()
         isMatching = true

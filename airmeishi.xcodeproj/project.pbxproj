@@ -29,9 +29,22 @@
 		F1133D962E70600C0097A2A4 /* airmeishiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = airmeishiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F1134DD32E73C3C50097A2A4 /* Exceptions for "airmeishi" folder in "airmeishi" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F1133D7D2E70600A0097A2A4 /* airmeishi */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F1133D802E70600A0097A2A4 /* airmeishi */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F1134DD32E73C3C50097A2A4 /* Exceptions for "airmeishi" folder in "airmeishi" target */,
+			);
 			path = airmeishi;
 			sourceTree = "<group>";
 		};
@@ -400,8 +413,12 @@
 				DEVELOPMENT_TEAM = 538MCM44UX;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = airmeishi/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes and business cards.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to contacts to save business card information.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs access to the local network to discover and connect with nearby devices for business card sharing.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to photo library to save QR codes and business card images.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -441,8 +458,12 @@
 				DEVELOPMENT_TEAM = 538MCM44UX;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = airmeishi/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes and business cards.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to contacts to save business card information.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs access to the local network to discover and connect with nearby devices for business card sharing.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to photo library to save QR codes and business card images.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

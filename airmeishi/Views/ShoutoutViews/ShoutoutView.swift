@@ -98,7 +98,7 @@ struct ShoutoutView: View {
         HStack(spacing: 16) {
             statBlock(icon: "person.2", title: "Users", value: "\(chartService.filteredData.count)")
             Spacer(minLength: 0)
-            statBlock(icon: "chart.scatter.3d", title: "Map", value: "Active")
+            statBlock(icon: "chart.scatter", title: "Map", value: "Active")
             Spacer(minLength: 0)
             statBlock(icon: "bolt", title: "Shoutouts", value: "Ready")
         }
