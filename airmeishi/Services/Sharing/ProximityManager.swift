@@ -535,7 +535,7 @@ extension ProximityManager: MCSessionDelegate {
 extension ProximityManager: MCNearbyServiceAdvertiserDelegate {
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
         // Store and publish pending invitation for UI confirmation
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             self.pendingInvitationHandler = invitationHandler
             self.pendingInvitation = PendingInvitation(peerID: peerID, receivedAt: Date())

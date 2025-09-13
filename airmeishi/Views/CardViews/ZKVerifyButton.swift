@@ -14,6 +14,7 @@ struct ZKVerifyButton: View {
     @State private var isVerifying = false
     @State private var verifyMessage: String?
     @State private var isValid: Bool = false
+    @State private var signatureHex: String?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -32,6 +33,26 @@ struct ZKVerifyButton: View {
                     .font(.caption)
                     .foregroundColor(isValid ? .green : .red)
             }
+
+            if let sig = signatureHex {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Signature").font(.caption).foregroundColor(.secondary)
+                        Spacer()
+                        Button {
+                            #if canImport(UIKit)
+                            UIPasteboard.general.string = sig
+                            #endif
+                        } label: { Image(systemName: "doc.on.doc").font(.caption) }
+                        .buttonStyle(.plain)
+                    }
+                    ScrollView(.horizontal) {
+                        Text(sig)
+                            .font(.caption2.monospaced())
+                            .textSelection(.enabled)
+                    }
+                }
+            }
         }
     }
     
@@ -46,6 +67,7 @@ struct ZKVerifyButton: View {
         )
         switch result {
         case .success(let proof):
+            signatureHex = proof.signature.map { String(format: "%02x", $0) }.joined()
             let vr = ProofGenerationManager.shared.verifySelectiveDisclosureProof(
                 proof,
                 expectedBusinessCardId: businessCard.id.uuidString
@@ -61,6 +83,7 @@ struct ZKVerifyButton: View {
         case .failure(let err):
             isValid = false
             verifyMessage = err.localizedDescription
+            signatureHex = nil
         }
         isVerifying = false
     }

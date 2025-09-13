@@ -115,7 +115,7 @@ struct MatchingRootView: View {
     
     private var incomingInvitationOverlay: some View {
         Group {
-            if let invitation = proximityManager.pendingInvitation, proximityManager.tryAcquireInvitationPresentation() {
+            if let invitation = proximityManager.pendingInvitation {
                 IncomingInvitationPopupView(
                     invitation: invitation,
                     onAccept: {
