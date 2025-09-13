@@ -74,7 +74,7 @@ struct IDView: View {
                             Button {
                                 showingSettings = true
                             } label: {
-                                Image(systemName: "gear")
+                                ZKBadge()
                             }
                         }
                     }
@@ -429,6 +429,29 @@ struct IDView: View {
 
 #Preview {
     IDView()
+}
+
+// MARK: - ZK stylized badge
+
+private struct ZKBadge: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+            Text("ZK")
+                .font(.headline.weight(.bold))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+        .frame(width: 34, height: 28)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+        )
+        .accessibilityLabel("ZK Settings")
+    }
 }
 
 

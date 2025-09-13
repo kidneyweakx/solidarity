@@ -91,6 +91,12 @@ final class SemaphoreGroupManager: ObservableObject {
         #endif
     }
 
+    /// Update the current Merkle root from an external source (API/chain)
+    func updateRoot(_ newRoot: String?) {
+        onMain { [weak self] in self?.merkleRoot = newRoot }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+    }
+
     // MARK: - Sync (Placeholders)
 
     /// TODO: Fetch latest group root from chain/API and update local state.
