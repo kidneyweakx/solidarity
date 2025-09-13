@@ -134,6 +134,7 @@ struct ProximitySharingView: View {
                 Spacer()
             }
         }
+        .overlay(incomingInvitationOverlay)
         .sheet(isPresented: $showQRScanner) {
             QRScannerView()
         }
@@ -190,6 +191,26 @@ struct ProximitySharingView: View {
             proximityManager.stopAdvertising()
             proximityManager.stopBrowsing()
             isMatching = false
+        }
+    }
+
+    private var incomingInvitationOverlay: some View {
+        Group {
+            if let invitation = proximityManager.pendingInvitation, proximityManager.tryAcquireInvitationPresentation() {
+                IncomingInvitationPopupView(
+                    invitation: invitation,
+                    onAccept: {
+                        proximityManager.respondToPendingInvitation(accept: true)
+                    },
+                    onDecline: {
+                        proximityManager.respondToPendingInvitation(accept: false)
+                    },
+                    onDismiss: {
+                        proximityManager.releaseInvitationPresentation()
+                    }
+                )
+                .transition(.opacity)
+            }
         }
     }
 }

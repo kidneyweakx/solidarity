@@ -19,6 +19,8 @@ struct NearbyPeersSheet: View {
     @State private var searchText = ""
     @State private var selectedPeer: ProximityPeer?
     @State private var showingPeerDetail = false
+    @State private var showingConnectPopup = false
+    @State private var connectTarget: ProximityPeer?
     @StateObject private var proximityManager = ProximityManager.shared
     @StateObject private var cardManager = CardManager.shared
     
@@ -52,6 +54,13 @@ struct NearbyPeersSheet: View {
                         peersGrid
                     }
                     if connectedCount > 0 { lightningActionButton }
+                }
+
+                if let target = connectTarget, showingConnectPopup {
+                    ConnectPeerPopupView(peer: target, isPresented: $showingConnectPopup, autoDismissOnSuccess: true) {
+                        connectTarget = nil
+                    }
+                    .transition(.opacity)
                 }
             }
             .navigationTitle("Lightning Peers")
@@ -112,7 +121,8 @@ struct NearbyPeersSheet: View {
                         selectedPeer = peer
                         showingPeerDetail = true
                     }, onConnect: {
-                        onSendInvitation(peer)
+                        connectTarget = peer
+                        showingConnectPopup = true
                     })
                 }
             }

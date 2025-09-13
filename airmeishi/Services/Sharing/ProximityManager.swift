@@ -32,6 +32,8 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
     @Published private(set) var lastError: CardError?
     @Published private(set) var receivedCards: [BusinessCard] = []
     @Published private(set) var lastReceivedVerification: VerificationStatus?
+    @Published var pendingInvitation: PendingInvitation?
+    @Published private(set) var isPresentingInvitation = false
     
     // MARK: - Private Properties
     private let serviceType = "airmeishi-share"
@@ -47,6 +49,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
     
     @MainActor private let contactRepository = ContactRepository.shared
     private var cancellables = Set<AnyCancellable>()
+    private var pendingInvitationHandler: ((Bool, MCSession?) -> Void)?
     
     // MARK: - Initialization
     
@@ -206,6 +209,27 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         connectionStatus = .disconnected
         
         print("Disconnected from all peers")
+    }
+
+    /// Respond to the most recent pending invitation
+    func respondToPendingInvitation(accept: Bool) {
+        guard let handler = pendingInvitationHandler else { return }
+        handler(accept, session)
+        pendingInvitation = nil
+        pendingInvitationHandler = nil
+        isPresentingInvitation = false
+    }
+
+    /// Attempt to exclusively present the invitation popup. Returns true if acquired.
+    func tryAcquireInvitationPresentation() -> Bool {
+        if isPresentingInvitation { return false }
+        isPresentingInvitation = true
+        return true
+    }
+    
+    /// Release the presentation lock for invitation popup.
+    func releaseInvitationPresentation() {
+        isPresentingInvitation = false
     }
     
     /// Get current sharing status
@@ -510,11 +534,14 @@ extension ProximityManager: MCSessionDelegate {
 
 extension ProximityManager: MCNearbyServiceAdvertiserDelegate {
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        
-        // Auto-accept invitations (in production, you might want user confirmation)
-        invitationHandler(true, session)
-        
-        print("Received invitation from \(peerID.displayName)")
+        // Store and publish pending invitation for UI confirmation
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.pendingInvitationHandler = invitationHandler
+            self.pendingInvitation = PendingInvitation(peerID: peerID, receivedAt: Date())
+            self.isPresentingInvitation = false
+            print("Received invitation from \(peerID.displayName)")
+        }
     }
     
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
@@ -676,4 +703,10 @@ struct ProximitySharingStatus {
     let nearbyPeersCount: Int
     let currentCard: BusinessCard?
     let sharingLevel: SharingLevel
+}
+
+/// Represents a pending incoming invitation that awaits user consent
+struct PendingInvitation {
+    let peerID: MCPeerID
+    let receivedAt: Date
 }

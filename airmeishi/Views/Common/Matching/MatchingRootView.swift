@@ -38,6 +38,7 @@ struct MatchingRootView: View {
         }
         .onAppear { rotateOuter = true; rotateMiddle = true; rotateInner = true }
         .overlay(shareButton)
+        .overlay(incomingInvitationOverlay)
         .sheet(isPresented: $showNearbySheet) {
             NearbyPeersSheet(
                 peers: proximityManager.nearbyPeers,
@@ -110,6 +111,26 @@ struct MatchingRootView: View {
     
     private func satellite(size: CGFloat) -> some View {
         Circle().fill(Color.white.opacity(0.8)).frame(width: size, height: size)
+    }
+    
+    private var incomingInvitationOverlay: some View {
+        Group {
+            if let invitation = proximityManager.pendingInvitation, proximityManager.tryAcquireInvitationPresentation() {
+                IncomingInvitationPopupView(
+                    invitation: invitation,
+                    onAccept: {
+                        proximityManager.respondToPendingInvitation(accept: true)
+                    },
+                    onDecline: {
+                        proximityManager.respondToPendingInvitation(accept: false)
+                    },
+                    onDismiss: {
+                        proximityManager.releaseInvitationPresentation()
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
     }
 }
 
