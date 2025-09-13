@@ -15,6 +15,8 @@ struct OCRScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var ocrManager = OCRManager()
     
+    @State private var showingLanguageSelection = true
+    @State private var selectedLanguage: ScanLanguage = .english
     @State private var showingCamera = false
     @State private var showingImagePicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -31,7 +33,9 @@ struct OCRScannerView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                if let image = capturedImage {
+                if showingLanguageSelection {
+                    languageSelectionSection
+                } else if let image = capturedImage {
                     imagePreviewSection(image)
                 } else {
                     scanningOptionsSection
@@ -94,6 +98,41 @@ struct OCRScannerView: View {
     }
     
     // MARK: - View Sections
+    
+    private var languageSelectionSection: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "globe")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+            
+            Text("Select Language")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Choose the language of the business card you want to scan")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            VStack(spacing: 12) {
+                ForEach(ScanLanguage.allCases) { language in
+                    LanguageOptionView(
+                        language: language,
+                        isSelected: selectedLanguage == language
+                    ) {
+                        selectedLanguage = language
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            Button("Continue") {
+                showingLanguageSelection = false
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 20)
+        }
+    }
     
     private var scanningOptionsSection: some View {
         VStack(spacing: 24) {
@@ -356,6 +395,10 @@ struct CameraView: UIViewControllerRepresentable {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.delegate = context.coordinator
+        picker.allowsEditing = false
+        picker.cameraCaptureMode = .photo
+        picker.cameraDevice = .rear
+        picker.cameraFlashMode = .auto
         return picker
     }
     
@@ -384,6 +427,7 @@ struct CameraView: UIViewControllerRepresentable {
         }
     }
 }
+
 
 #Preview {
     OCRScannerView { _ in }

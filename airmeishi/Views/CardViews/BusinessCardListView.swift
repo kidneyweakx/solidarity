@@ -203,22 +203,22 @@ private struct WalletStackListView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
-            ZStack(alignment: .top) {
+            LazyVStack(spacing: 0) {
                 ForEach(Array(cards.enumerated()), id: \.offset) { pair in
                     let index = pair.offset
                     let card = pair.element
                     WalletCardView(card: card, onEdit: { onEdit(card) }, onAddToWallet: { onAddToWallet(card) })
                         .frame(height: cardHeight)
                         .offset(y: CGFloat(index) * overlap)
-                        .zIndex(Double(index))
+                        .zIndex(Double(cards.count - index))
                         .onTapGesture { onFocus(card) }
+                        .padding(.horizontal, 16)
+                        .padding(.top, index == 0 ? 16 : -overlap)
                 }
             }
-            .frame(height: CGFloat(max(cards.count - 1, 0)) * overlap + cardHeight)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
             .padding(.bottom, 40)
         }
+        .scrollDisabled(cards.count <= 3) // Disable scroll if 3 or fewer cards
     }
 }
 

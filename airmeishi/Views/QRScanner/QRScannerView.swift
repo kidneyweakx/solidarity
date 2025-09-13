@@ -14,6 +14,8 @@ struct QRScannerView: View {
     @StateObject private var qrManager = QRCodeManager.shared
     @StateObject private var contactRepository = ContactRepository.shared
     
+    @State private var showingLanguageSelection = true
+    @State private var selectedLanguage: ScanLanguage = .english
     @State private var showingScannedCard = false
     @State private var showingError = false
     @State private var lastVerification: VerificationStatus = .unverified
@@ -25,66 +27,73 @@ struct QRScannerView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                // Camera preview
-                CameraPreviewView(previewLayer: $cameraPreviewLayer)
-                    .ignoresSafeArea()
-                
-                // Overlay UI
-                VStack {
-                    // Top bar
-                    HStack {
-                        Button("Cancel") {
-                            qrManager.stopScanning()
-                            dismiss()
+            if showingLanguageSelection {
+                languageSelectionView
+            } else {
+                ZStack {
+                    // Camera preview
+                    CameraPreviewView(previewLayer: $cameraPreviewLayer)
+                        .ignoresSafeArea()
+                    
+                    // Overlay UI
+                    VStack {
+                        // Top bar
+                        HStack {
+                            Button("Cancel") {
+                                qrManager.stopScanning()
+                                dismiss()
+                            }
+                            .foregroundColor(.white)
+                            .padding()
+                            
+                            Spacer()
+                            
+                            Text("Scan QR Code")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                            
+                            // Language indicator
+                            Button(selectedLanguage.flag) {
+                                showingLanguageSelection = true
+                            }
+                            .foregroundColor(.white)
+                            .padding()
                         }
-                        .foregroundColor(.white)
-                        .padding()
+                        .background(Color.black.opacity(0.7))
                         
                         Spacer()
                         
-                        Text("Scan QR Code")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                        // Scanning frame
+                        ScanningFrameView()
                         
                         Spacer()
                         
-                        // Placeholder for balance
-                        Color.clear
-                            .frame(width: 60)
-                    }
-                    .background(Color.black.opacity(0.7))
-                    
-                    Spacer()
-                    
-                    // Scanning frame
-                    ScanningFrameView()
-                    
-                    Spacer()
-                    
-                    // Instructions
-                    VStack(spacing: 8) {
-                        Text("Position QR code within the frame")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                        
-                        if qrManager.isScanning {
-                            HStack {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                                
-                                Text("Scanning...")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
+                        // Instructions
+                        VStack(spacing: 8) {
+                            Text("Position QR code within the frame")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                            
+                            if qrManager.isScanning {
+                                HStack {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                    
+                                    Text("Scanning...")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                }
                             }
                         }
+                        .padding()
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                        .padding(.bottom, 50)
                     }
-                    .padding()
-                    .background(Color.black.opacity(0.7))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                    .padding(.bottom, 50)
                 }
             }
         }
@@ -135,6 +144,45 @@ struct QRScannerView: View {
         } message: {
             Text(permissionAlertMessage)
         }
+    }
+    
+    // MARK: - Language Selection View
+    
+    private var languageSelectionView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "globe")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+            
+            Text("Select Language")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Choose the language of the QR code you want to scan")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            VStack(spacing: 12) {
+                ForEach(ScanLanguage.allCases) { language in
+                    LanguageOptionView(
+                        language: language,
+                        isSelected: selectedLanguage == language
+                    ) {
+                        selectedLanguage = language
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            Button("Continue") {
+                showingLanguageSelection = false
+                ensureCameraPermissionAndStart()
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 20)
+        }
+        .padding()
     }
     
     // MARK: - Private Methods
@@ -207,6 +255,7 @@ struct CameraPreviewView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
+        view.contentMode = .scaleAspectFill
         return view
     }
     
@@ -216,6 +265,7 @@ struct CameraPreviewView: UIViewRepresentable {
         
         // Add new preview layer if available
         if let previewLayer = previewLayer {
+            previewLayer.videoGravity = .resizeAspectFill
             previewLayer.frame = uiView.bounds
             uiView.layer.addSublayer(previewLayer)
         }
@@ -431,6 +481,7 @@ struct ScannedCardView: View {
         }
     }
 }
+
 
 // MARK: - Supporting Views
 // Shared components are now in SharedComponents.swift
