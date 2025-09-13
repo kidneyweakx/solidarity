@@ -35,22 +35,28 @@ struct IDView: View {
     @State private var isWorking: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String?
+    @State private var latestProof: String?
     
     var body: some View {
         NavigationStack {
-            GeometryReader { geo in
-                ZStack {
-                    let base = min(geo.size.width, geo.size.height)
-                    // Indices chosen so that 1 = inner, 3 = outer to light from inner -> outer
-                    ringView(size: base * 0.80, index: 3)
-                    ringView(size: base * 0.62, index: 2)
-                    ringView(size: base * 0.46, index: 1)
-                    centerButton(size: base * 0.36)
+            VStack(spacing: 16) {
+                GeometryReader { geo in
+                    ZStack {
+                        let base = min(geo.size.width, geo.size.height)
+                        // Indices chosen so that 1 = inner, 3 = outer to light from inner -> outer
+                        ringView(size: base * 0.80, index: 3)
+                        ringView(size: base * 0.62, index: 2)
+                        ringView(size: base * 0.46, index: 1)
+                        centerButton(size: base * 0.36)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(height: 360)
+
+                verificationPanel()
             }
-                .navigationTitle("ID")
-                .toolbar {
+            .navigationTitle("ID")
+            .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
                                 showingSettings = true
@@ -59,7 +65,7 @@ struct IDView: View {
                             }
                         }
                     }
-        }
+                }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { ZKIdentitySettingsView() }
         }
@@ -166,6 +172,7 @@ struct IDView: View {
                     _ = proof
                     DispatchQueue.main.async {
                         proofStatus = "Proof generated"
+                        latestProof = proof
                         isWorking = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                     }
@@ -252,6 +259,71 @@ struct IDView: View {
         guard let obj = try? JSONSerialization.jsonObject(with: data, options: []) else { return nil }
         guard let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .withoutEscapingSlashes]) else { return nil }
         return String(data: prettyData, encoding: .utf8)
+    }
+
+    // MARK: - Verification UI/Action
+
+    @ViewBuilder
+    private func verificationPanel() -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Verification")
+                    .font(.headline)
+                Spacer()
+                Button("Verify Proof") { verifyProofAction() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!SemaphoreIdentityManager.proofsSupported || latestProof == nil || isWorking)
+            }
+            if let proof = latestProof {
+                let display = prettyPrintJSON(proof) ?? String(proof.prefix(600))
+        ScrollView {
+                    Text(display)
+                        .font(.footnote)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 140)
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemBackground)))
+            } else {
+                Text("No proof yet. Tap the center to generate.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func verifyProofAction() {
+        guard let proof = latestProof else { return }
+        if isWorking { return }
+        if !SemaphoreIdentityManager.proofsSupported {
+            proofStatus = "Verification not available"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+            return
+        }
+        isWorking = true
+        proofStatus = "Verifying..."
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let ok = try idm.verifyProof(proof)
+                print("[Semaphore] Verify result: \(ok)")
+                DispatchQueue.main.async {
+                    proofStatus = ok ? "Proof valid" : "Proof invalid"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+                }
+            } catch {
+                print("[Semaphore] Verify error: \(error)")
+                DispatchQueue.main.async {
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                    proofStatus = "Error: \(error.localizedDescription)"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+                }
+            }
+        }
     }
 }
 
