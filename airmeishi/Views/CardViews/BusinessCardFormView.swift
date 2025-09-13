@@ -21,15 +21,14 @@ struct BusinessCardFormView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isLoading = false
-    @State private var isSimpleMode = true
     @State private var showingWalletPassSheet = false
     @State private var createdCardForWallet: BusinessCard?
     
-    // Skills management
-    @State private var newSkillName = ""
-    @State private var newSkillCategory = ""
-    @State private var newSkillProficiency = ProficiencyLevel.intermediate
-    @State private var showingSkillForm = false
+    // Social network management
+    @State private var newSocialPlatform = SocialPlatform.linkedin
+    @State private var newSocialUsername = ""
+    @State private var newSocialUrl = ""
+    @State private var showingSocialForm = false
     
     // Validation states
     @State private var nameError: String?
@@ -47,25 +46,10 @@ struct BusinessCardFormView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section {
-                    Picker("Mode", selection: $isSimpleMode) {
-                        Text("Simple").tag(true)
-                        Text("Advanced").tag(false)
-                    }
-                    .pickerStyle(.segmented)
-                }
-                if isSimpleMode {
-                    basicInfoSection
-                    contactInfoSection
-                    simplePrivacySection
-                } else {
-                    profileImageSection
-                    basicInfoSection
-                    contactInfoSection
-                    skillsSection
-                    categoriesSection
-                    privacySection
-                }
+                basicInfoSection
+                contactInfoSection
+                socialNetworksSection
+                simplePrivacySection
             }
             .navigationTitle(isEditing ? "Edit Card" : "New Card")
             .navigationBarTitleDisplayMode(.inline)
@@ -111,8 +95,39 @@ struct BusinessCardFormView: View {
     
     // MARK: - Form Sections
     
+    private var socialNetworksSection: some View {
+        Section {
+            ForEach(businessCard.socialNetworks) { social in
+                SocialNetworkRowView(social: social) {
+                    removeSocialNetwork(social)
+                }
+            }
+            .onDelete(perform: deleteSocialNetworks)
+            
+            Button("Add Social Network") {
+                showingSocialForm = true
+            }
+            .disabled(businessCard.socialNetworks.count >= 2)
+            .foregroundColor(.blue)
+        } header: {
+            Text("Social Networks")
+        } footer: {
+            Text("Add up to 2 social networks or websites")
+        }
+        .sheet(isPresented: $showingSocialForm) {
+            SocialNetworkFormView(
+                platform: $newSocialPlatform,
+                username: $newSocialUsername,
+                url: $newSocialUrl
+            ) { social in
+                addSocialNetwork(social)
+                showingSocialForm = false
+            }
+        }
+    }
+    
     private var simplePrivacySection: some View {
-        Section("Privacy") {
+        Section {
             Toggle(isOn: Binding(
                 get: { businessCard.sharingPreferences.publicFields.isEmpty },
                 set: { enable in
@@ -140,62 +155,14 @@ struct BusinessCardFormView: View {
             Text("When enabled, your public QR will reveal minimal info. You can switch to Advanced to fine-tune.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+        } header: {
+            Text("Privacy")
         }
     }
 
-    private var profileImageSection: some View {
-        Section {
-            HStack {
-                Spacer()
-                
-                VStack(spacing: 12) {
-                    if let imageData = businessCard.profileImage,
-                       let uiImage = UIImage(data: imageData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 100, height: 100)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                    } else {
-                        Circle()
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 100, height: 100)
-                            .overlay {
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.gray)
-                            }
-                    }
-                    
-                    HStack(spacing: 16) {
-                        Button("Camera") {
-                            showingCamera = true
-                        }
-                        .buttonStyle(.bordered)
-                        
-                        Button("Photos") {
-                            showingImagePicker = true
-                        }
-                        .buttonStyle(.bordered)
-                        
-                        if businessCard.profileImage != nil {
-                            Button("Remove") {
-                                businessCard.profileImage = nil
-                            }
-                            .buttonStyle(.bordered)
-                            .foregroundColor(.red)
-                        }
-                    }
-                }
-                
-                Spacer()
-            }
-        }
-    }
     
     private var basicInfoSection: some View {
-        Section("Basic Information") {
+        Section {
             VStack(alignment: .leading, spacing: 4) {
                 TextField("Full Name", text: $businessCard.name)
                     .textContentType(.name)
@@ -221,11 +188,13 @@ struct BusinessCardFormView: View {
                 set: { businessCard.company = $0.isEmpty ? nil : $0 }
             ))
             .textContentType(.organizationName)
+        } header: {
+            Text("Basic Information")
         }
     }
     
     private var contactInfoSection: some View {
-        Section("Contact Information") {
+        Section {
             VStack(alignment: .leading, spacing: 4) {
                 TextField("Email", text: Binding(
                     get: { businessCard.email ?? "" },
@@ -267,83 +236,11 @@ struct BusinessCardFormView: View {
                 showingOCRScanner = true
             }
             .foregroundColor(.blue)
+        } header: {
+            Text("Contact Information")
         }
     }
     
-    private var skillsSection: some View {
-        Section {
-            ForEach(businessCard.skills) { skill in
-                SkillRowView(skill: skill) {
-                    removeSkill(skill)
-                }
-            }
-            .onDelete(perform: deleteSkills)
-            
-            Button("Add Skill") {
-                showingSkillForm = true
-            }
-            .foregroundColor(.blue)
-        } header: {
-            Text("Skills & Expertise")
-        } footer: {
-            Text("Add your professional skills and expertise areas")
-        }
-        .sheet(isPresented: $showingSkillForm) {
-            SkillFormView(
-                skillName: $newSkillName,
-                skillCategory: $newSkillCategory,
-                proficiencyLevel: $newSkillProficiency
-            ) { skill in
-                addSkill(skill)
-                showingSkillForm = false
-            }
-        }
-    }
-    
-    private var categoriesSection: some View {
-        Section {
-            if businessCard.categories.isEmpty {
-                Text("No categories added")
-                    .foregroundColor(.gray)
-                    .italic()
-            } else {
-                ForEach(businessCard.categories, id: \.self) { category in
-                    HStack {
-                        Text(category)
-                        Spacer()
-                        Button("Remove") {
-                            removeCategory(category)
-                        }
-                        .foregroundColor(.red)
-                        .font(.caption)
-                    }
-                }
-            }
-            
-            Button("Add Category") {
-                // This would show a category picker or input
-                // For now, we'll derive categories from skills
-                updateCategoriesFromSkills()
-            }
-            .foregroundColor(.blue)
-        } header: {
-            Text("Categories")
-        } footer: {
-            Text("Categories help organize and find your cards")
-        }
-    }
-    
-    private var privacySection: some View {
-        Section {
-            NavigationLink("Privacy Settings") {
-                PrivacySettingsView(sharingPreferences: $businessCard.sharingPreferences)
-            }
-        } header: {
-            Text("Privacy & Sharing")
-        } footer: {
-            Text("Control what information is shared and with whom")
-        }
-    }
     
     // MARK: - Computed Properties
     
@@ -421,28 +318,18 @@ struct BusinessCardFormView: View {
         }
     }
     
-    private func addSkill(_ skill: Skill) {
-        businessCard.skills.append(skill)
-        updateCategoriesFromSkills()
+    private func addSocialNetwork(_ social: SocialNetwork) {
+        if businessCard.socialNetworks.count < 2 {
+            businessCard.socialNetworks.append(social)
+        }
     }
     
-    private func removeSkill(_ skill: Skill) {
-        businessCard.skills.removeAll { $0.id == skill.id }
-        updateCategoriesFromSkills()
+    private func removeSocialNetwork(_ social: SocialNetwork) {
+        businessCard.socialNetworks.removeAll { $0.id == social.id }
     }
     
-    private func deleteSkills(at offsets: IndexSet) {
-        businessCard.skills.remove(atOffsets: offsets)
-        updateCategoriesFromSkills()
-    }
-    
-    private func removeCategory(_ category: String) {
-        businessCard.categories.removeAll { $0 == category }
-    }
-    
-    private func updateCategoriesFromSkills() {
-        let skillCategories = Set(businessCard.skills.map { $0.category })
-        businessCard.categories = Array(skillCategories).sorted()
+    private func deleteSocialNetworks(at offsets: IndexSet) {
+        businessCard.socialNetworks.remove(atOffsets: offsets)
     }
     
     private func loadSelectedImage(_ item: PhotosPickerItem?) {
@@ -490,31 +377,23 @@ struct BusinessCardFormView: View {
 
 // MARK: - Supporting Views
 
-struct SkillRowView: View {
-    let skill: Skill
+struct SocialNetworkRowView: View {
+    let social: SocialNetwork
     let onRemove: () -> Void
     
     var body: some View {
         HStack {
+            Image(systemName: social.platform.icon)
+                .foregroundColor(.blue)
+                .frame(width: 20)
+            
             VStack(alignment: .leading, spacing: 2) {
-                Text(skill.name)
+                Text(social.platform.rawValue)
                     .font(.body)
                 
-                HStack {
-                    Text(skill.category)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text(skill.proficiencyLevel.rawValue)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.1))
-                        .foregroundColor(.blue)
-                        .cornerRadius(4)
-                }
+                Text(social.username)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             Spacer()
@@ -525,6 +404,73 @@ struct SkillRowView: View {
             .foregroundColor(.red)
             .font(.caption)
         }
+    }
+}
+
+struct SocialNetworkFormView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    @Binding var platform: SocialPlatform
+    @Binding var username: String
+    @Binding var url: String
+    
+    let onSave: (SocialNetwork) -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section {
+                    Picker("Platform", selection: $platform) {
+                        ForEach(SocialPlatform.allCases, id: \.self) { platform in
+                            Text(platform.rawValue).tag(platform)
+                        }
+                    }
+                    
+                    TextField("Username", text: $username)
+                        .textInputAutocapitalization(.never)
+                    
+                    TextField("URL (optional)", text: $url)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                } header: {
+                    Text("Social Network Details")
+                }
+            }
+            .navigationTitle("Add Social Network")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Add") {
+                        saveSocialNetwork()
+                    }
+                    .disabled(!isFormValid)
+                }
+            }
+        }
+    }
+    
+    private var isFormValid: Bool {
+        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private func saveSocialNetwork() {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        let social = SocialNetwork(
+            platform: platform,
+            username: trimmedUsername,
+            url: trimmedUrl.isEmpty ? nil : trimmedUrl
+        )
+        
+        onSave(social)
+        dismiss()
     }
 }
 

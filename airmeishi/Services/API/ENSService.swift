@@ -19,6 +19,7 @@ class ENSService {
         return await client.request(
             path: "ens/ens/resolve",
             queryItems: [URLQueryItem(name: "name", value: name)],
+            includeAuth: false,
             decodeAs: ENSResponse.self
         )
     }
@@ -28,6 +29,7 @@ class ENSService {
         return await client.request(
             path: "ens/ens/reverse",
             queryItems: [URLQueryItem(name: "address", value: address)],
+            includeAuth: false,
             decodeAs: ENSResponse.self
         )
     }

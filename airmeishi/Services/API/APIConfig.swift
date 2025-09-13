@@ -12,7 +12,7 @@ struct APIConfig {
     /// Default API base URL
     static var baseURL: URL {
         // Keep in sync with server deployment
-        return URL(string: "https://airmeishi.app/api/v1")!
+        return URL(string: "http://localhost:8787")!
     }
     
     /// Request timeout interval

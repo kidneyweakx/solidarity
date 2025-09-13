@@ -344,6 +344,7 @@ class ProofGenerationManager {
         case .email: return businessCard.email ?? ""
         case .phone: return businessCard.phone ?? ""
         case .profileImage: return businessCard.profileImage?.base64EncodedString() ?? ""
+        case .socialNetworks: return businessCard.socialNetworks.map { "\($0.platform.rawValue): \($0.username)" }.joined(separator: ", ")
         case .skills: return businessCard.skills.map { $0.name }.joined(separator: ",")
         }
     }

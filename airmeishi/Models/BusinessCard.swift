@@ -16,6 +16,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
     var email: String?
     var phone: String?
     var profileImage: Data?
+    var socialNetworks: [SocialNetwork]
     var skills: [Skill]
     var categories: [String]
     var sharingPreferences: SharingPreferences
@@ -30,6 +31,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
         email: String? = nil,
         phone: String? = nil,
         profileImage: Data? = nil,
+        socialNetworks: [SocialNetwork] = [],
         skills: [Skill] = [],
         categories: [String] = [],
         sharingPreferences: SharingPreferences = SharingPreferences(),
@@ -43,6 +45,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
         self.email = email
         self.phone = phone
         self.profileImage = profileImage
+        self.socialNetworks = socialNetworks
         self.skills = skills
         self.categories = categories
         self.sharingPreferences = sharingPreferences
@@ -66,9 +69,53 @@ struct BusinessCard: Codable, Identifiable, Equatable {
         if !allowedFields.contains(.email) { filtered.email = nil }
         if !allowedFields.contains(.phone) { filtered.phone = nil }
         if !allowedFields.contains(.profileImage) { filtered.profileImage = nil }
+        if !allowedFields.contains(.socialNetworks) { filtered.socialNetworks = [] }
         if !allowedFields.contains(.skills) { filtered.skills = [] }
         
         return filtered
+    }
+}
+
+/// Social network information
+struct SocialNetwork: Codable, Identifiable, Equatable {
+    let id: UUID
+    var platform: SocialPlatform
+    var username: String
+    var url: String?
+    
+    init(
+        id: UUID = UUID(),
+        platform: SocialPlatform,
+        username: String,
+        url: String? = nil
+    ) {
+        self.id = id
+        self.platform = platform
+        self.username = username
+        self.url = url
+    }
+}
+
+/// Supported social media platforms
+enum SocialPlatform: String, Codable, CaseIterable {
+    case linkedin = "LinkedIn"
+    case twitter = "Twitter"
+    case instagram = "Instagram"
+    case facebook = "Facebook"
+    case github = "GitHub"
+    case website = "Website"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .linkedin: return "linkedin"
+        case .twitter: return "twitter"
+        case .instagram: return "instagram"
+        case .facebook: return "facebook"
+        case .github: return "github"
+        case .website: return "globe"
+        case .other: return "link"
+        }
     }
 }
 
@@ -183,6 +230,7 @@ enum BusinessCardField: String, Codable, CaseIterable {
     case email = "email"
     case phone = "phone"
     case profileImage = "profileImage"
+    case socialNetworks = "socialNetworks"
     case skills = "skills"
     
     var displayName: String {
@@ -193,6 +241,7 @@ enum BusinessCardField: String, Codable, CaseIterable {
         case .email: return "Email"
         case .phone: return "Phone"
         case .profileImage: return "Profile Image"
+        case .socialNetworks: return "Social Networks"
         case .skills: return "Skills"
         }
     }
@@ -268,6 +317,13 @@ extension BusinessCard {
             vCard += "TEL:\(phone)\n"
         }
         
+        // Add social networks
+        for social in socialNetworks {
+            if let url = social.url, !url.isEmpty {
+                vCard += "URL:\(url)\n"
+            }
+        }
+        
         // Add skills as notes
         if !skills.isEmpty {
             let skillsText = skills.map { "\($0.name) (\($0.proficiencyLevel.rawValue))" }.joined(separator: ", ")
@@ -286,6 +342,10 @@ extension BusinessCard {
             company: "Tech Corp",
             email: "john.doe@techcorp.com",
             phone: "+1 (555) 123-4567",
+            socialNetworks: [
+                SocialNetwork(platform: .linkedin, username: "johndoe", url: "https://linkedin.com/in/johndoe"),
+                SocialNetwork(platform: .github, username: "johndoe", url: "https://github.com/johndoe")
+            ],
             skills: [
                 Skill(name: "Swift", category: "Programming", proficiencyLevel: .expert),
                 Skill(name: "SwiftUI", category: "UI Framework", proficiencyLevel: .advanced),

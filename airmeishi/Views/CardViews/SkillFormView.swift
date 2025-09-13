@@ -2,7 +2,7 @@
 //  SkillFormView.swift
 //  airmeishi
 //
-//  Form for adding and editing skills with categorization and proficiency levels
+//  Simplified skill form - now only used for advanced features
 //
 
 import SwiftUI
@@ -14,34 +14,7 @@ struct SkillFormView: View {
     @Binding var skillCategory: String
     @Binding var proficiencyLevel: ProficiencyLevel
     
-    @State private var showingCustomCategory = false
-    @State private var customCategory = ""
-    
     let onSave: (Skill) -> Void
-    
-    // Common skill categories
-    private let commonCategories = [
-        "Programming",
-        "Design",
-        "Marketing",
-        "Sales",
-        "Management",
-        "Finance",
-        "Operations",
-        "Engineering",
-        "Data Science",
-        "Product",
-        "Customer Service",
-        "Human Resources",
-        "Legal",
-        "Consulting",
-        "Education",
-        "Healthcare",
-        "Research",
-        "Writing",
-        "Languages",
-        "Other"
-    ]
     
     var body: some View {
         NavigationView {
@@ -50,34 +23,8 @@ struct SkillFormView: View {
                     TextField("Skill Name", text: $skillName)
                         .textInputAutocapitalization(.words)
                     
-                    if showingCustomCategory {
-                        TextField("Custom Category", text: $customCategory)
-                            .textInputAutocapitalization(.words)
-                            .onChange(of: customCategory) { _, newValue in
-                                skillCategory = newValue
-                            }
-                    } else {
-                        Picker("Category", selection: $skillCategory) {
-                            ForEach(commonCategories, id: \.self) { category in
-                                Text(category).tag(category)
-                            }
-                        }
-                        .onChange(of: skillCategory) { _, newValue in
-                            if newValue == "Other" {
-                                showingCustomCategory = true
-                                customCategory = ""
-                                skillCategory = ""
-                            }
-                        }
-                    }
-                    
-                    if showingCustomCategory {
-                        Button("Use Predefined Categories") {
-                            showingCustomCategory = false
-                            skillCategory = commonCategories.first ?? ""
-                        }
-                        .foregroundColor(.blue)
-                    }
+                    TextField("Category", text: $skillCategory)
+                        .textInputAutocapitalization(.words)
                     
                     Picker("Proficiency Level", selection: $proficiencyLevel) {
                         ForEach(ProficiencyLevel.allCases, id: \.self) { level in
@@ -85,29 +32,6 @@ struct SkillFormView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                }
-                
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Proficiency Levels:")
-                            .font(.headline)
-                        
-                        ForEach(ProficiencyLevel.allCases, id: \.self) { level in
-                            HStack {
-                                Text(level.rawValue)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text(proficiencyDescription(for: level))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Guidelines")
-                } footer: {
-                    Text("Choose the level that best represents your current expertise")
                 }
             }
             .navigationTitle("Add Skill")
@@ -147,19 +71,6 @@ struct SkillFormView: View {
         
         onSave(skill)
         dismiss()
-    }
-    
-    private func proficiencyDescription(for level: ProficiencyLevel) -> String {
-        switch level {
-        case .beginner:
-            return "Learning the basics"
-        case .intermediate:
-            return "Comfortable with fundamentals"
-        case .advanced:
-            return "Highly skilled and experienced"
-        case .expert:
-            return "Industry leader and mentor"
-        }
     }
 }
 
