@@ -100,9 +100,7 @@ final class SemaphoreIdentityManager: ObservableObject {
 
     /// Verify a Semaphore proof JSON string.
     func verifyProof(_ proof: String) throws -> Bool {
-        print("[Semaphore] Verify proof: \(proof)")
         #if canImport(Semaphore)
-        print("[Semaphore] Verify proof result: \(try verifySemaphoreProof(proof: proof))")
         return try verifySemaphoreProof(proof: proof)
         #else
         return false

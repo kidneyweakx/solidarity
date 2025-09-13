@@ -36,6 +36,8 @@ struct IDView: View {
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String?
     @State private var latestProof: String?
+    @State private var isEditingProof: Bool = false
+    @State private var proofDraft: String = ""
     
     var body: some View {
         NavigationStack {
@@ -48,6 +50,10 @@ struct IDView: View {
                         ringView(size: base * 0.62, index: 2)
                         ringView(size: base * 0.46, index: 1)
                         centerButton(size: base * 0.36)
+                            .onTapGesture(count: 3) {
+                                isEditingProof.toggle()
+                                if isEditingProof, let proof = latestProof { proofDraft = proof }
+                            }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -58,6 +64,12 @@ struct IDView: View {
             .navigationTitle("ID")
             .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 16) {
+                        NavigationLink {
+                            GroupManagementView()
+                            } label: {
+                            Image(systemName: "person.3")
+                            }
                             Button {
                                 showingSettings = true
                             } label: {
@@ -66,6 +78,7 @@ struct IDView: View {
                         }
                     }
                 }
+        }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { ZKIdentitySettingsView() }
         }
@@ -91,7 +104,11 @@ struct IDView: View {
         let longPressDuration: Double = 3.0
         return ZStack {
             Circle()
-                .fill(LinearGradient(colors: [.accentColor.opacity(0.9), .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(
+                    identityCommitment.isEmpty
+                    ? LinearGradient(colors: [.accentColor.opacity(0.9), .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    : LinearGradient(colors: [.green.opacity(0.95), .blue.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .frame(width: size, height: size)
                 .shadow(color: .accentColor.opacity(isPressing ? 0.6 : 0.25), radius: isPressing ? 20 : 10)
                 .overlay(
@@ -109,13 +126,21 @@ struct IDView: View {
                                 .background(Color.black.opacity(0.25))
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                         } else if !identityCommitment.isEmpty {
-                            Text("Commitment ready")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.20))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            VStack(spacing: 4) {
+                                Text("Commitment")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.9))
+                                Text(shortCommitment(identityCommitment))
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.black.opacity(0.20))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                Text("Tap to copy")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.9))
+                            }
                         } else {
                             Text("Tap: ID + Proof\nHold: Create Group")
                                 .font(.caption2)
@@ -160,28 +185,32 @@ struct IDView: View {
         proofStatus = "Working..."
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let bundle = try idm.loadOrCreateIdentity()
-                DispatchQueue.main.async { identityCommitment = bundle.commitment }
-                if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
-                if SemaphoreIdentityManager.proofsSupported {
-                    let usedMessage = "hello"
-                    let usedScope = "public"
-                    logProofInputs(commitment: bundle.commitment, members: group.members, message: usedMessage, scope: usedScope, depth: 16)
-                    let proof = try idm.generateProof(groupCommitments: group.members, message: usedMessage, scope: usedScope, merkleDepth: 16)
-                    logProofOutput(proof)
-                    _ = proof
+                if identityCommitment.isEmpty {
+                    // First time: create ID and show commitment; do not regenerate later
+                    let bundle = try idm.loadOrCreateIdentity()
                     DispatchQueue.main.async {
-                        proofStatus = "Proof generated"
-                        latestProof = proof
+                        identityCommitment = bundle.commitment
+                        proofStatus = "ID created"
                         isWorking = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                     }
+                    if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
                 } else {
+                    // Already have ID: copy commitment
+                    #if canImport(UIKit)
                     DispatchQueue.main.async {
-                        proofStatus = "Identity ready (add SemaphoreSwift to enable proofs)"
+                        UIPasteboard.general.string = identityCommitment
+                        proofStatus = "Copied"
                         isWorking = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
                     }
+                    #else
+                    DispatchQueue.main.async {
+                        proofStatus = "Commitment ready"
+                        isWorking = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
+                    }
+                    #endif
                 }
             } catch {
                 print("[Semaphore] Error on tapAction: \(error)")
@@ -261,6 +290,13 @@ struct IDView: View {
         return String(data: prettyData, encoding: .utf8)
     }
 
+    private func shortCommitment(_ c: String) -> String {
+        if c.count <= 12 { return c }
+        let start = c.prefix(6)
+        let end = c.suffix(6)
+        return String(start) + "…" + String(end)
+    }
+
     // MARK: - Verification UI/Action
 
     @ViewBuilder
@@ -274,9 +310,19 @@ struct IDView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(!SemaphoreIdentityManager.proofsSupported || latestProof == nil || isWorking)
             }
-            if let proof = latestProof {
+            if isEditingProof {
+                Text("Editing mode (triple tap center to toggle)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: $proofDraft)
+                    .font(.footnote)
+                    .frame(minHeight: 120, maxHeight: 180)
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemBackground)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.2)))
+            } else if let proof = latestProof {
                 let display = prettyPrintJSON(proof) ?? String(proof.prefix(600))
-        ScrollView {
+                ScrollView {
                     Text(display)
                         .font(.footnote)
                         .textSelection(.enabled)
@@ -295,7 +341,13 @@ struct IDView: View {
     }
 
     private func verifyProofAction() {
-        guard let proof = latestProof else { return }
+        let proof: String
+        if isEditingProof {
+            proof = proofDraft
+        } else {
+            guard let p = latestProof else { return }
+            proof = p
+        }
         if isWorking { return }
         if !SemaphoreIdentityManager.proofsSupported {
             proofStatus = "Verification not available"
