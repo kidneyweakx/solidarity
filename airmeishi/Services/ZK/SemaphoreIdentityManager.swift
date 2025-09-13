@@ -105,11 +105,14 @@ final class SemaphoreIdentityManager: ObservableObject {
         // Build a minimal group that at least contains our own identity element.
         // TODO: When available, convert external commitment strings to elements and include them.
         let group = Group(members: [identity.toElement()])
+        // Normalize message/scope to 32-byte hex to satisfy field limits
+        let normalizedMessage = Self.hashToHex32(message)
+        let normalizedScope = Self.hashToHex32(scope)
         return try generateSemaphoreProof(
             identity: identity,
             group: group,
-            message: message,
-            scope: scope,
+            message: normalizedMessage,
+            scope: normalizedScope,
             merkleTreeDepth: UInt16(merkleDepth)
         )
         #else
@@ -137,6 +140,12 @@ final class SemaphoreIdentityManager: ObservableObject {
     /// Fallback commitment when Semaphore library is not present: SHA256 of secret bytes (hex)
     private func fallbackCommitment(from secret: Data) -> String {
         let digest = SHA256.hash(data: secret)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func hashToHex32(_ input: String) -> String {
+        let data = Data(input.utf8)
+        let digest = SHA256.hash(data: data)
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 

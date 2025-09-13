@@ -323,6 +323,12 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         } else {
             connectionStatus = .disconnected
         }
+        // Broadcast status change for listeners across the app
+        NotificationCenter.default.post(
+            name: .matchingConnectionStatusChanged,
+            object: nil,
+            userInfo: [ProximityEventKey.status: connectionStatus]
+        )
     }
     
     private func setupNotifications() {
@@ -439,6 +445,11 @@ extension ProximityManager: MCSessionDelegate {
             self.updateConnectionStatus()
             
             print("Peer \(peerID.displayName) changed state to: \(state)")
+
+            // Auto-send current card when a connection is established
+            if state == .connected, let card = self.currentCard {
+                self.sendCard(card, to: peerID, sharingLevel: self.currentSharingLevel)
+            }
         }
     }
     
@@ -459,12 +470,25 @@ extension ProximityManager: MCSessionDelegate {
                     self.nearbyPeers[index].verification = status
                 }
                 self.handleReceivedCard(payload.card, from: payload.senderID, status: status)
+
+                // Broadcast received card
+                NotificationCenter.default.post(
+                    name: .matchingReceivedCard,
+                    object: nil,
+                    userInfo: [ProximityEventKey.card: payload.card]
+                )
             }
             
         } catch {
             print("Failed to decode received data: \(error)")
             DispatchQueue.main.async { [weak self] in
-                self?.lastError = .sharingError("Failed to decode received card")
+                let err: CardError = .sharingError("Failed to decode received card")
+                self?.lastError = err
+                NotificationCenter.default.post(
+                    name: .matchingError,
+                    object: nil,
+                    userInfo: [ProximityEventKey.error: err]
+                )
             }
         }
     }
@@ -522,6 +546,11 @@ extension ProximityManager: MCNearbyServiceBrowserDelegate {
             if !self.nearbyPeers.contains(where: { $0.peerID == peerID }) {
                 self.nearbyPeers.append(peer)
                 print("Found peer: \(peerID.displayName)")
+                NotificationCenter.default.post(
+                    name: .matchingPeerListUpdated,
+                    object: nil,
+                    userInfo: [ProximityEventKey.peers: self.nearbyPeers]
+                )
             }
         }
     }
@@ -530,6 +559,13 @@ extension ProximityManager: MCNearbyServiceBrowserDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.nearbyPeers.removeAll { $0.peerID == peerID }
             print("Lost peer: \(peerID.displayName)")
+            if let peers = self?.nearbyPeers {
+                NotificationCenter.default.post(
+                    name: .matchingPeerListUpdated,
+                    object: nil,
+                    userInfo: [ProximityEventKey.peers: peers]
+                )
+            }
         }
     }
     

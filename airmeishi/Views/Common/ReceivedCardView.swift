@@ -5,6 +5,9 @@ struct ReceivedCardView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isLightningAnimating = false
     @State private var showingShoutoutGallery = false
+    @State private var isSaved = false
+    @State private var showingSaveConfirmation = false
+    @StateObject private var contactRepository = ContactRepository.shared
     
     var body: some View {
         NavigationView {
@@ -60,7 +63,7 @@ struct ReceivedCardView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                                 
-                                Text("Business card has been saved to your lightning gallery")
+                                Text(isSaved ? "Business card has been saved to your contacts" : "Tap save to add this card to your contacts")
                                     .font(.body)
                                     .foregroundColor(.gray)
                                     .multilineTextAlignment(.center)
@@ -138,34 +141,66 @@ struct ReceivedCardView: View {
                         
                         // Lightning action buttons
                         VStack(spacing: 12) {
-                            Button(action: { showingShoutoutGallery = true }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "bolt.fill")
-                                        .font(.title2)
-                                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
-                                        .animation(
-                                            .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                                            value: isLightningAnimating
-                                        )
-                                    
-                                    Text("View in Lightning Gallery")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [.yellow, .orange, .red],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
+                            if !isSaved {
+                                Button(action: saveCard) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "square.and.arrow.down")
+                                            .font(.title2)
+                                            .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                                            .animation(
+                                                .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
+                                                value: isLightningAnimating
                                             )
-                                        )
-                                        .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
-                                )
+                                        
+                                        Text("Save to Contacts")
+                                            .font(.headline)
+                                            .fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [.blue, .purple, .blue],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .shadow(color: .blue.opacity(0.5), radius: 10, x: 0, y: 0)
+                                    )
+                                }
+                            } else {
+                                Button(action: { showingShoutoutGallery = true }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "bolt.fill")
+                                            .font(.title2)
+                                            .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                                            .animation(
+                                                .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
+                                                value: isLightningAnimating
+                                            )
+                                        
+                                        Text("View in Lightning Gallery")
+                                            .font(.headline)
+                                            .fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [.yellow, .orange, .red],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
+                                    )
+                                }
                             }
                             
                             Button(action: { dismiss() }) {
@@ -211,7 +246,31 @@ struct ReceivedCardView: View {
             .sheet(isPresented: $showingShoutoutGallery) {
                 ShoutoutView()
             }
+            .alert("Card Saved!", isPresented: $showingSaveConfirmation) {
+                Button("OK") { }
+            } message: {
+                Text("The business card has been successfully saved to your contacts.")
+            }
         }
         .preferredColorScheme(.dark)
+    }
+    
+    private func saveCard() {
+        let contact = Contact(
+            businessCard: card,
+            source: .proximity,
+            verificationStatus: .unverified
+        )
+        
+        let result = contactRepository.addContact(contact)
+        
+        switch result {
+        case .success:
+            isSaved = true
+            showingSaveConfirmation = true
+        case .failure(let error):
+            print("Failed to save contact: \(error.localizedDescription)")
+            // You could show an error alert here if needed
+        }
     }
 }
