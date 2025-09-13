@@ -355,7 +355,14 @@ class ProofGenerationManager {
         masterKey: SymmetricKey,
         recipientId: String?
     ) -> Data {
-        let fieldData = "\(field.rawValue):\(value)".data(using: .utf8) ?? Data()
+        // Use only first 3 characters for non-name fields to limit commitment size and support lightweight verification
+        let committedValue: String
+        if field == .name {
+            committedValue = value
+        } else {
+            committedValue = String(value.prefix(3))
+        }
+        let fieldData = "\(field.rawValue):\(committedValue)".data(using: .utf8) ?? Data()
         let recipientData = (recipientId ?? "").data(using: .utf8) ?? Data()
         
         let commitment = SHA256.hash(data: fieldData + recipientData + masterKey.withUnsafeBytes { Data($0) })
@@ -402,17 +409,19 @@ class ProofGenerationManager {
         attribute: AttributeType,
         value: String
     ) -> Bool {
+        // Compare by first 3 characters to avoid leaking full data and to simplify checks
+        let target = String(value.prefix(3)).lowercased()
         switch attribute {
         case .skill:
-            return businessCard.skills.contains { $0.name.lowercased() == value.lowercased() }
+            return businessCard.skills.contains { String($0.name.prefix(3)).lowercased() == target }
         case .company:
-            return businessCard.company?.lowercased() == value.lowercased()
+            return String((businessCard.company ?? "").prefix(3)).lowercased() == target
         case .title:
-            return businessCard.title?.lowercased() == value.lowercased()
+            return String((businessCard.title ?? "").prefix(3)).lowercased() == target
         case .domain:
             if let email = businessCard.email {
                 let domain = email.components(separatedBy: "@").last?.lowercased()
-                return domain == value.lowercased()
+                return String((domain ?? "").prefix(3)).lowercased() == target
             }
             return false
         }
@@ -431,97 +440,4 @@ class ProofGenerationManager {
             return nil
         }
     }
-}
-
-// MARK: - Supporting Types
-
-struct SelectiveDisclosureProof: Codable {
-    let proofId: String
-    let businessCardId: String
-    let disclosedFields: [BusinessCardField: String]
-    let fieldCommitments: [BusinessCardField: Data]
-    let recipientId: String?
-    let signature: Data
-    let createdAt: Date
-    let expiresAt: Date
-    
-    var isExpired: Bool {
-        return expiresAt < Date()
-    }
-}
-
-struct AttributeProof: Codable {
-    let proofId: String
-    let businessCardId: String
-    let attributeType: AttributeType
-    let commitment: Data
-    let signature: Data
-    let createdAt: Date
-    let expiresAt: Date
-    
-    var isExpired: Bool {
-        return expiresAt < Date()
-    }
-}
-
-struct RangeProof: Codable {
-    let proofId: String
-    let businessCardId: String
-    let attributeType: AttributeType
-    let range: ClosedRange<Int>
-    let isInRange: Bool
-    let commitment: Data
-    let signature: Data
-    let createdAt: Date
-    let expiresAt: Date
-    
-    var isExpired: Bool {
-        return expiresAt < Date()
-    }
-}
-
-struct ProofVerificationResult: Codable {
-    let isValid: Bool
-    let reason: String
-    let verifiedAt: Date
-}
-
-enum AttributeType: String, Codable, CaseIterable {
-    case skill = "skill"
-    case company = "company"
-    case title = "title"
-    case domain = "domain"
-    
-    var displayName: String {
-        switch self {
-        case .skill: return "Skill"
-        case .company: return "Company"
-        case .title: return "Job Title"
-        case .domain: return "Email Domain"
-        }
-    }
-}
-
-// MARK: - Private Supporting Types
-
-private struct ProofData: Codable {
-    let businessCardId: String
-    let selectedFields: Set<BusinessCardField>
-    let recipientId: String?
-    let timestamp: Date
-}
-
-private struct AttributeProofData: Codable {
-    let businessCardId: String
-    let attributeType: AttributeType
-    let hasAttribute: Bool
-    let timestamp: Date
-}
-
-private struct RangeProofData: Codable {
-    let businessCardId: String
-    let attributeType: AttributeType
-    let range: ClosedRange<Int>
-    let isInRange: Bool
-    let timestamp: Date
 }

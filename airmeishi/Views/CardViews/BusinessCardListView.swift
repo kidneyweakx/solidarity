@@ -67,7 +67,8 @@ struct BusinessCardListView: View {
                 }
             }
             .sheet(isPresented: $showingCreateCard) {
-                BusinessCardFormView(businessCard: featuredCard) { saved in
+                // If featuredCard is nil, we are creating. Otherwise we are editing the selected card.
+                BusinessCardFormView(businessCard: featuredCard, forceCreate: featuredCard == nil) { saved in
                     // Keep focus on updated card
                     featuredCard = saved
                 }

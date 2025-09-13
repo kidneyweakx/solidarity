@@ -37,9 +37,24 @@ struct BusinessCardFormView: View {
     
     let onSave: (BusinessCard) -> Void
     
-    init(businessCard: BusinessCard? = nil, onSave: @escaping (BusinessCard) -> Void) {
-        self._businessCard = State(initialValue: businessCard ?? BusinessCard(name: ""))
-        self._isEditing = State(initialValue: businessCard != nil)
+    init(businessCard: BusinessCard? = nil, forceCreate: Bool = false, onSave: @escaping (BusinessCard) -> Void) {
+        let initialCard = businessCard ?? BusinessCard(name: "")
+        self._businessCard = State(initialValue: initialCard)
+        if forceCreate {
+            self._isEditing = State(initialValue: false)
+        } else if let bc = businessCard {
+            // Only treat as editing if the card already exists in storage
+            let exists: Bool
+            switch CardManager.shared.getCard(id: bc.id) {
+            case .success:
+                exists = true
+            case .failure:
+                exists = false
+            }
+            self._isEditing = State(initialValue: exists)
+        } else {
+            self._isEditing = State(initialValue: false)
+        }
         self.onSave = onSave
     }
     
@@ -50,6 +65,13 @@ struct BusinessCardFormView: View {
                 contactInfoSection
                 socialNetworksSection
                 simplePrivacySection
+                if businessCard.sharingPreferences.useZK {
+                    Section {
+                        ZKVerifyButton(businessCard: businessCard, sharingLevel: .professional)
+                    } header: {
+                        Text("ZK Tools")
+                    }
+                }
             }
             .navigationTitle(isEditing ? "Edit Card" : "New Card")
             .navigationBarTitleDisplayMode(.inline)
