@@ -2,7 +2,7 @@
 //  ShoutoutDetailView.swift
 //  airmeishi
 //
-//  Detailed view for a specific user in the shoutout system
+//  Lightning-themed detailed view for a specific user in the shoutout system
 //
 
 import SwiftUI
@@ -11,137 +11,264 @@ struct ShoutoutDetailView: View {
     let user: ShoutoutUser
     @Environment(\.dismiss) private var dismiss
     @State private var showingCreateShoutout = false
+    @State private var isLightningAnimating = false
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header with profile and stats
-                    headerSection
-                    
-                    // 3D Position Info
-                    positionSection
-                    
-                    // User Information
-                    informationSection
-                    
-                    // Tags and Skills
-                    tagsSection
-                    
-                    // Action Buttons
-                    actionButtons
+            ZStack {
+                // Dark gradient background with lightning effect
+                LinearGradient(
+                    colors: [
+                        Color.black,
+                        Color.blue.opacity(0.1),
+                        Color.purple.opacity(0.05),
+                        Color.black
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Lightning header with profile
+                        lightningHeader
+                        
+                        // Lightning stats grid
+                        lightningStatsGrid
+                        
+                        // User Information
+                        informationSection
+                        
+                        // Tags and Skills
+                        tagsSection
+                        
+                        // Lightning Action Buttons
+                        lightningActionButtons
+                    }
+                    .padding()
                 }
-                .padding()
             }
-            .navigationTitle("User")
+            .navigationTitle("Lightning Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
                         dismiss()
                     }
+                    .foregroundColor(.white)
                 }
             }
             .sheet(isPresented: $showingCreateShoutout) {
                 CreateShoutoutView(selectedUser: user)
             }
+            .onAppear {
+                startLightningAnimation()
+            }
         }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Header Section
+    // MARK: - Lightning Header
     
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            // Profile Image
-            AsyncImage(url: user.profileImageURL) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(Color.white.opacity(0.15))
-                    .overlay {
-                        Text(user.initials)
-                            .font(.title)
-                            .foregroundColor(.white)
-                    }
+    private var lightningHeader: some View {
+        VStack(spacing: 20) {
+            // Lightning bolt and title
+            HStack {
+                Image(systemName: "bolt.fill")
+                    .foregroundColor(.yellow)
+                    .font(.title)
+                    .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                        value: isLightningAnimating
+                    )
+                
+                Text("Lightning Profile")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Spacer()
             }
-            .frame(width: 100, height: 100)
-            .clipShape(Circle())
-            .overlay(
+            
+            // Profile Image with lightning effects
+            ZStack {
+                // Lightning ring
                 Circle()
-                    .stroke(verificationColor.opacity(0.8), lineWidth: 2)
-            )
-            .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.yellow, .orange, .red],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 3
+                    )
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                        value: isLightningAnimating
+                    )
+                
+                AsyncImage(url: user.profileImageURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay {
+                            Text(user.initials)
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                }
+                .frame(width: 100, height: 100)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(verificationColor, lineWidth: 3)
+                        .scaleEffect(isLightningAnimating ? 1.05 : 1.0)
+                        .animation(
+                            .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
+                            value: isLightningAnimating
+                        )
+                )
+                .shadow(
+                    color: isLightningAnimating ? .yellow.opacity(0.6) : verificationColor.opacity(0.5),
+                    radius: isLightningAnimating ? 15 : 8,
+                    x: 0, y: 4
+                )
+            }
             
             // Name and Title
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Text(user.name)
-                    .font(.headline)
+                    .font(.title)
+                    .fontWeight(.bold)
                     .foregroundColor(.white)
                 
                 if !user.title.isEmpty {
                     Text(user.title)
-                        .font(.footnote)
-                        .foregroundColor(.gray)
+                        .font(.headline)
+                        .foregroundColor(.yellow)
                 }
                 
                 if !user.company.isEmpty {
                     Text(user.company)
-                        .font(.footnote)
+                        .font(.subheadline)
                         .foregroundColor(.gray)
                 }
             }
             
-            // Verification Status
-            HStack(spacing: 6) {
+            // Verification Status with lightning
+            HStack(spacing: 8) {
                 Image(systemName: user.verificationStatus.systemImageName)
+                    .foregroundColor(verificationColor)
+                    .font(.title3)
+                
                 Text(user.verificationStatus.displayName)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Image(systemName: "bolt.fill")
+                    .foregroundColor(.yellow)
+                    .font(.caption)
+                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
+                        value: isLightningAnimating
+                    )
             }
-            .font(.caption)
-            .foregroundColor(verificationColor)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(verificationColor.opacity(0.08))
-            .cornerRadius(12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(verificationColor.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(verificationColor, lineWidth: 1)
+                    )
+            )
         }
     }
     
-    // MARK: - Position Section
+    // MARK: - Lightning Stats Grid
     
-    private var positionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("3D Position")
-                .font(.headline)
-                .foregroundColor(.white)
+    private var lightningStatsGrid: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Lightning Stats")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Image(systemName: "bolt.circle.fill")
+                    .foregroundColor(.yellow)
+                    .font(.title2)
+                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                        value: isLightningAnimating
+                    )
+            }
             
-            VStack(spacing: 8) {
-                PositionRow(
-                    title: "Events Score",
-                    value: String(format: "%.1f", user.eventScore),
-                    color: .cyan,
-                    description: "Activity Level"
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                LightningStatCard(
+                    title: "Activity",
+                    value: String(format: "%.0f%%", user.eventScore * 100),
+                    icon: "bolt.fill",
+                    color: .yellow,
+                    isLightningAnimating: isLightningAnimating
                 )
                 
-                PositionRow(
-                    title: "Type Score",
-                    value: String(format: "%.1f", user.typeScore),
-                    color: .orange,
-                    description: "Professional Level"
+                LightningStatCard(
+                    title: "Professional",
+                    value: String(format: "%.0f%%", user.typeScore * 100),
+                    icon: "briefcase.fill",
+                    color: .blue,
+                    isLightningAnimating: isLightningAnimating
                 )
                 
-                PositionRow(
-                    title: "Character Score",
-                    value: String(format: "%.1f", user.characterScore),
+                LightningStatCard(
+                    title: "Character",
+                    value: String(format: "%.0f%%", user.characterScore * 100),
+                    icon: "person.fill",
                     color: .green,
-                    description: "Personality Traits"
+                    isLightningAnimating: isLightningAnimating
+                )
+                
+                LightningStatCard(
+                    title: "Verified",
+                    value: user.verificationStatus.displayName,
+                    icon: user.verificationStatus.systemImageName,
+                    color: verificationColor,
+                    isLightningAnimating: isLightningAnimating
                 )
             }
         }
         .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
     
     // MARK: - Information Section
@@ -207,38 +334,96 @@ struct ShoutoutDetailView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Action Buttons
+    // MARK: - Lightning Action Buttons
     
-    private var actionButtons: some View {
-        VStack(spacing: 12) {
+    private var lightningActionButtons: some View {
+        VStack(spacing: 16) {
+            // Primary Lightning Shoutout Button
             Button(action: { showingCreateShoutout = true }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "bolt")
-                    Text("Send shoutout")
+                HStack(spacing: 12) {
+                    Image(systemName: "bolt.fill")
+                        .font(.title2)
+                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                        .animation(
+                            .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
+                            value: isLightningAnimating
+                        )
+                    
+                    Text("Send Lightning Shoutout")
+                        .font(.headline)
+                        .fontWeight(.bold)
                 }
-                .font(.headline)
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
-            }
-            
-            Button(action: {
-                // TODO: Implement view profile action
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "person")
-                    Text("View profile")
-                }
-                .font(.subheadline)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white.opacity(0.06))
-                .cornerRadius(12)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [.yellow, .orange, .red],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
+                )
+            }
+            
+            // Secondary Actions
+            HStack(spacing: 12) {
+                Button(action: {
+                    // TODO: Implement view profile action
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.circle")
+                            .font(.title3)
+                        Text("View Profile")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                }
+                
+                Button(action: {
+                    // TODO: Implement share action
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                        Text("Share")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                }
             }
         }
+    }
+    
+    // MARK: - Animation Control
+    
+    private func startLightningAnimation() {
+        isLightningAnimating = true
     }
     
     // MARK: - Computed Properties
@@ -253,36 +438,48 @@ struct ShoutoutDetailView: View {
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Lightning Stat Card
 
-struct PositionRow: View {
+struct LightningStatCard: View {
     let title: String
     let value: String
+    let icon: String
     let color: Color
-    let description: String
+    let isLightningAnimating: Bool
     
     var body: some View {
-        HStack {
-            Circle()
-                .fill(color)
-                .frame(width: 12, height: 12)
+        VStack(spacing: 8) {
+            // Icon with lightning effect
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+                .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                .animation(
+                    .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                    value: isLightningAnimating
+                )
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            Spacer()
-            
+            // Value
             Text(value)
                 .font(.headline)
-                .foregroundColor(color)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            // Title
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
         }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 }
 
