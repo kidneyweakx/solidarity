@@ -59,6 +59,7 @@ struct IDView: View {
                 }
                 .frame(height: 360)
 
+                identityPanel()
                 verificationPanel()
             }
             .navigationTitle("ID")
@@ -190,7 +191,7 @@ struct IDView: View {
                     let bundle = try idm.loadOrCreateIdentity()
                     DispatchQueue.main.async {
                         identityCommitment = bundle.commitment
-                        proofStatus = "ID created"
+                        proofStatus = bundle.commitment.isEmpty ? "ID created (pending)" : "ID created"
                         isWorking = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                     }
@@ -213,7 +214,7 @@ struct IDView: View {
                     #endif
                 }
             } catch {
-                print("[Semaphore] Error on tapAction: \(error)")
+                ZKLog.error("Error on tapAction: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     errorMessage = error.localizedDescription
                     showErrorAlert = true
@@ -241,7 +242,7 @@ struct IDView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                 }
             } catch {
-                print("[Semaphore] Error on longPressAction: \(error)")
+                ZKLog.error("Error on longPressAction: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     errorMessage = error.localizedDescription
                     showErrorAlert = true
@@ -335,6 +336,53 @@ struct IDView: View {
                 Text("No proof yet. Tap the center to generate.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    // MARK: - Identity panel
+
+    @ViewBuilder
+    private func identityPanel() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Your ID")
+                    .font(.headline)
+                Spacer()
+                if !identityCommitment.isEmpty {
+                    Button {
+                        #if canImport(UIKit)
+                        UIPasteboard.general.string = identityCommitment
+                        #endif
+                        proofStatus = "Copied"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            if identityCommitment.isEmpty {
+                Text("No ID yet. Tap the center to create your identity.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(shortCommitment(identityCommitment))
+                        .font(.callout.monospaced())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(uiColor: .secondarySystemBackground)))
+                    DisclosureGroup("Show full") {
+                        ScrollView(.horizontal, showsIndicators: true) {
+                            Text(identityCommitment)
+                                .font(.footnote.monospaced())
+                                .textSelection(.enabled)
+                                .padding(.vertical, 4)
+                        }
+                    }
+                }
             }
         }
         .padding(.horizontal)

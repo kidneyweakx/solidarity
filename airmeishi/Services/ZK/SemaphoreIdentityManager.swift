@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 #if canImport(Semaphore)
 import Semaphore
@@ -40,7 +41,16 @@ final class SemaphoreIdentityManager: ObservableObject {
 
     /// Load existing identity or create a new one with random secret.
     func loadOrCreateIdentity() throws -> IdentityBundle {
-        if let existing = try? keychain.loadIdentity() { return existing }
+        if let existing = try? keychain.loadIdentity() {
+            let fixed = ensureCommitment(bundle: existing)
+            if fixed.commitment != existing.commitment {
+                try? keychain.storeIdentity(fixed)
+                ZKLog.info("Migrated empty commitment → prefix: \(fixed.commitment.prefix(8))")
+            } else {
+                ZKLog.info("Loaded existing identity with commitment prefix: \(existing.commitment.prefix(8))")
+            }
+            return fixed
+        }
 
         let secret = randomSecret32()
 
@@ -49,16 +59,23 @@ final class SemaphoreIdentityManager: ObservableObject {
         let commitment = identity.commitment()
         let bundle = IdentityBundle(privateKey: secret, commitment: commitment)
         try keychain.storeIdentity(bundle)
+        ZKLog.info("Created identity (semaphore). commitment prefix: \(commitment.prefix(8))")
         return bundle
         #else
-        let bundle = IdentityBundle(privateKey: secret, commitment: "")
+        let bundle = IdentityBundle(privateKey: secret, commitment: fallbackCommitment(from: secret))
         try keychain.storeIdentity(bundle)
+        ZKLog.info("Created identity (fallback). commitment prefix: \(bundle.commitment.prefix(8))")
         return bundle
         #endif
     }
 
     /// Returns current identity bundle if present.
-    func getIdentity() -> IdentityBundle? { try? keychain.loadIdentity() }
+    func getIdentity() -> IdentityBundle? {
+        guard let loaded = try? keychain.loadIdentity() else { return nil }
+        let fixed = ensureCommitment(bundle: loaded)
+        if fixed.commitment != loaded.commitment { try? keychain.storeIdentity(fixed) }
+        return fixed
+    }
 
     /// Replaces identity with provided secret bytes.
     func importIdentity(privateKey: Data) throws -> IdentityBundle {
@@ -67,10 +84,12 @@ final class SemaphoreIdentityManager: ObservableObject {
         let commitment = identity.commitment()
         let bundle = IdentityBundle(privateKey: privateKey, commitment: commitment)
         try keychain.storeIdentity(bundle)
+        ZKLog.info("Imported identity (semaphore). commitment prefix: \(commitment.prefix(8))")
         return bundle
         #else
-        let bundle = IdentityBundle(privateKey: privateKey, commitment: "")
+        let bundle = IdentityBundle(privateKey: privateKey, commitment: fallbackCommitment(from: privateKey))
         try keychain.storeIdentity(bundle)
+        ZKLog.info("Imported identity (fallback). commitment prefix: \(bundle.commitment.prefix(8))")
         return bundle
         #endif
     }
@@ -113,6 +132,23 @@ final class SemaphoreIdentityManager: ObservableObject {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         return Data(bytes)
+    }
+
+    /// Fallback commitment when Semaphore library is not present: SHA256 of secret bytes (hex)
+    private func fallbackCommitment(from secret: Data) -> String {
+        let digest = SHA256.hash(data: secret)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func ensureCommitment(bundle: IdentityBundle) -> IdentityBundle {
+        guard bundle.commitment.isEmpty else { return bundle }
+        #if canImport(Semaphore)
+        let identity = Identity(privateKey: bundle.privateKey)
+        let commitment = identity.commitment()
+        return IdentityBundle(privateKey: bundle.privateKey, commitment: commitment)
+        #else
+        return IdentityBundle(privateKey: bundle.privateKey, commitment: fallbackCommitment(from: bundle.privateKey))
+        #endif
     }
 }
 
