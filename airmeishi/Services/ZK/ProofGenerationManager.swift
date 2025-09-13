@@ -52,13 +52,14 @@ class ProofGenerationManager {
                 }
             }
             
-            // Generate proof signature
-            let proofData = try? JSONEncoder().encode(ProofData(
+            // Generate proof signature with deterministic payload
+            let now = Date()
+            let proofData = canonicalProofSigningData(
                 businessCardId: businessCard.id.uuidString,
                 selectedFields: selectedFields,
                 recipientId: recipientId,
-                timestamp: Date()
-            ))
+                timestamp: now
+            )
             
             guard let proofDataToSign = proofData else {
                 return .failure(.encryptionError("Failed to encode proof data"))
@@ -75,7 +76,7 @@ class ProofGenerationManager {
                     fieldCommitments: fieldCommitments,
                     recipientId: recipientId,
                     signature: signature,
-                    createdAt: Date(),
+                    createdAt: now,
                     expiresAt: Calendar.current.date(byAdding: .hour, value: 24, to: Date()) ?? Date()
                 ))
                 
@@ -112,13 +113,13 @@ class ProofGenerationManager {
             ))
         }
         
-        // Verify signature
-        let proofData = try? JSONEncoder().encode(ProofData(
+        // Verify signature using the same deterministic payload as signing
+        let proofData = canonicalProofSigningData(
             businessCardId: proof.businessCardId,
             selectedFields: Set(proof.disclosedFields.keys),
             recipientId: proof.recipientId,
             timestamp: proof.createdAt
-        ))
+        )
         
         guard let proofDataToVerify = proofData else {
             return .success(ProofVerificationResult(
@@ -347,6 +348,23 @@ class ProofGenerationManager {
         case .socialNetworks: return businessCard.socialNetworks.map { "\($0.platform.rawValue): \($0.username)" }.joined(separator: ", ")
         case .skills: return businessCard.skills.map { $0.name }.joined(separator: ",")
         }
+    }
+
+    /// Build a deterministic signing payload for selective disclosure proofs.
+    /// We avoid JSON encoder ordering issues by constructing a canonical string:
+    /// businessCardId|field1,field2,...|recipientId|timestampSeconds
+    private func canonicalProofSigningData(
+        businessCardId: String,
+        selectedFields: Set<BusinessCardField>,
+        recipientId: String?,
+        timestamp: Date
+    ) -> Data? {
+        var fieldNames = selectedFields.map { $0.rawValue }
+        fieldNames.sort()
+        let ts = String(Int(timestamp.timeIntervalSince1970))
+        let recipient = recipientId ?? ""
+        let canonical = [businessCardId, fieldNames.joined(separator: ","), recipient, ts].joined(separator: "|")
+        return canonical.data(using: .utf8)
     }
     
     private func generateFieldCommitment(

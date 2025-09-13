@@ -105,9 +105,10 @@ final class SemaphoreIdentityManager: ObservableObject {
         // Build a minimal group that at least contains our own identity element.
         // TODO: When available, convert external commitment strings to elements and include them.
         let group = Group(members: [identity.toElement()])
-        // Normalize message/scope to 32-byte hex to satisfy field limits
-        let normalizedMessage = Self.hashToHex32(message)
-        let normalizedScope = Self.hashToHex32(scope)
+        // The bindings expect arbitrary strings that are internally converted to field elements.
+        // Avoid passing 64-char hex (which exceeds 32 bytes) — clamp to 32 UTF-8 bytes if needed.
+        let normalizedMessage = Self.clampToMax32Bytes(message)
+        let normalizedScope = Self.clampToMax32Bytes(scope)
         return try generateSemaphoreProof(
             identity: identity,
             group: group,
@@ -143,10 +144,10 @@ final class SemaphoreIdentityManager: ObservableObject {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func hashToHex32(_ input: String) -> String {
-        let data = Data(input.utf8)
-        let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
+    private static func clampToMax32Bytes(_ input: String) -> String {
+        let bytes = Array(input.utf8)
+        if bytes.count <= 32 { return input }
+        return String(decoding: bytes.prefix(32), as: UTF8.self)
     }
 
     private func ensureCommitment(bundle: IdentityBundle) -> IdentityBundle {
