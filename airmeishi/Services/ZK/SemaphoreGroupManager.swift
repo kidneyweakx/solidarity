@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Combine
 
 #if canImport(Semaphore)
 import Semaphore
@@ -21,6 +22,11 @@ final class SemaphoreGroupManager: ObservableObject {
 
     private let storage = GroupStorage()
 
+    // Ensure @Published updates happen on main thread
+    private func onMain(_ block: @escaping () -> Void) {
+        if Thread.isMainThread { block() } else { DispatchQueue.main.async(execute: block) }
+    }
+
     // MARK: - Persistence
 
     func load() {
@@ -34,22 +40,31 @@ final class SemaphoreGroupManager: ObservableObject {
     // MARK: - Membership
 
     func setMembers(_ commitments: [String]) {
-        members = Array(Set(commitments))
-        recomputeRoot()
-        save()
+        onMain { [weak self] in
+            guard let self = self else { return }
+            self.members = Array(Set(commitments))
+            self.recomputeRoot()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
 
     func addMember(_ commitment: String) {
-        guard !members.contains(commitment) else { return }
-        members.append(commitment)
-        recomputeRoot()
-        save()
+        onMain { [weak self] in
+            guard let self = self else { return }
+            guard !self.members.contains(commitment) else { return }
+            self.members.append(commitment)
+            self.recomputeRoot()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
 
     func removeMember(_ commitment: String) {
-        members.removeAll { $0 == commitment }
-        recomputeRoot()
-        save()
+        onMain { [weak self] in
+            guard let self = self else { return }
+            self.members.removeAll { $0 == commitment }
+            self.recomputeRoot()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
 
     func indexOf(_ commitment: String) -> Int? { members.firstIndex(of: commitment) }
@@ -58,12 +73,21 @@ final class SemaphoreGroupManager: ObservableObject {
 
     func recomputeRoot() {
         #if canImport(Semaphore)
-        let elements = members.map { Element($0) }
-        let group = Group(members: elements)
-        merkleRoot = group.root()
+        // Build a minimal group using our local identity only to avoid relying on Element initializers.
+        // TODO: Convert stored commitment strings to proper elements once supported by the bindings.
+        var newRoot: String? = nil
+        if let bundle = SemaphoreIdentityManager.shared.getIdentity() {
+            let identity = Identity(privateKey: bundle.privateKey)
+            let group = Group(members: [identity.toElement()])
+            if let rootData = group.root() {
+                newRoot = rootData.map { String(format: "%02x", $0) }.joined()
+            }
+        }
+        onMain { [weak self] in self?.merkleRoot = newRoot }
         #else
         // Fallback: simple hash of members for display only
-        merkleRoot = String(members.joined(separator: ":").hashValue)
+        let newRoot = String(members.joined(separator: ":").hashValue)
+        onMain { [weak self] in self?.merkleRoot = newRoot }
         #endif
     }
 

@@ -2,7 +2,7 @@
 //  IDView.swift
 //  airmeishi
 //
-//  Identity & Events: shows verified participation history and lets user import .eml
+//  Identity view with ring interaction for Semaphore identity/group and proof generation
 //
 
 import SwiftUI
@@ -32,32 +32,41 @@ struct IDView: View {
     @State private var ringActiveCount: Int = 0
     @State private var isPressing: Bool = false
     @State private var ringTimer: Timer?
-
+    @State private var isWorking: Bool = false
+    @State private var showErrorAlert: Bool = false
+    @State private var errorMessage: String?
+    
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
                 ZStack {
                     let base = min(geo.size.width, geo.size.height)
-                    ringView(size: base * 0.80, index: 1)
+                    // Indices chosen so that 1 = inner, 3 = outer to light from inner -> outer
+                    ringView(size: base * 0.80, index: 3)
                     ringView(size: base * 0.62, index: 2)
-                    ringView(size: base * 0.46, index: 3)
+                    ringView(size: base * 0.46, index: 1)
                     centerButton(size: base * 0.36)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .navigationTitle("ID")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gear")
+                .navigationTitle("ID")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "gear")
+                            }
+                        }
                     }
-                }
-            }
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { ZKIdentitySettingsView() }
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "Unknown error")
         }
         .onAppear {
             if let id = idm.getIdentity() { identityCommitment = id.commitment }
@@ -76,7 +85,7 @@ struct IDView: View {
         let longPressDuration: Double = 3.0
         return ZStack {
             Circle()
-                .fill(LinearGradient(colors: [.accentColor, .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [.accentColor.opacity(0.9), .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: size, height: size)
                 .shadow(color: .accentColor.opacity(isPressing ? 0.6 : 0.25), radius: isPressing ? 20 : 10)
                 .overlay(
@@ -84,19 +93,32 @@ struct IDView: View {
                         Text("ID")
                             .font(.title2.weight(.bold))
                             .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 1)
                         if let status = proofStatus {
                             Text(status)
                                 .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.25))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         } else if !identityCommitment.isEmpty {
                             Text("Commitment ready")
                                 .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.20))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         } else {
                             Text("Tap: ID + Proof\nHold: Create Group")
                                 .font(.caption2)
                                 .multilineTextAlignment(.center)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.20))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                     }
                 )
@@ -127,31 +149,109 @@ struct IDView: View {
     }
 
     private func tapAction() {
-        do {
-            let bundle = try idm.loadOrCreateIdentity()
-            identityCommitment = bundle.commitment
-            if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
-            let proof = try idm.generateProof(groupCommitments: group.members, message: "hello", scope: "public", merkleDepth: 16)
-            proofStatus = "Proof generated"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-            _ = proof
-        } catch {
-            proofStatus = "Error: \(error.localizedDescription)"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+        if isWorking { return }
+        isWorking = true
+        proofStatus = "Working..."
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bundle = try idm.loadOrCreateIdentity()
+                DispatchQueue.main.async { identityCommitment = bundle.commitment }
+                if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
+                if SemaphoreIdentityManager.proofsSupported {
+                    let usedMessage = "hello"
+                    let usedScope = "public"
+                    logProofInputs(commitment: bundle.commitment, members: group.members, message: usedMessage, scope: usedScope, depth: 16)
+                    let proof = try idm.generateProof(groupCommitments: group.members, message: usedMessage, scope: usedScope, merkleDepth: 16)
+                    logProofOutput(proof)
+                    _ = proof
+                    DispatchQueue.main.async {
+                        proofStatus = "Proof generated"
+                        isWorking = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        proofStatus = "Identity ready (add SemaphoreSwift to enable proofs)"
+                        isWorking = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+                    }
+                }
+            } catch {
+                print("[Semaphore] Error on tapAction: \(error)")
+                DispatchQueue.main.async {
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                    proofStatus = "Error: \(error.localizedDescription)"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+                }
+            }
         }
     }
 
     private func longPressAction() {
-        do {
-            let bundle = try idm.loadOrCreateIdentity()
-            identityCommitment = bundle.commitment
-            group.setMembers([bundle.commitment])
-            proofStatus = "Group created"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-        } catch {
-            proofStatus = "Error: \(error.localizedDescription)"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+        if isWorking { return }
+        isWorking = true
+        proofStatus = "Working..."
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bundle = try idm.loadOrCreateIdentity()
+                DispatchQueue.main.async { identityCommitment = bundle.commitment }
+                group.setMembers([bundle.commitment])
+                print("[Semaphore] Group initialized with 1 member (self). Commitment: \(bundle.commitment)")
+                DispatchQueue.main.async {
+                    proofStatus = "Group created"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+                }
+            } catch {
+                print("[Semaphore] Error on longPressAction: \(error)")
+                DispatchQueue.main.async {
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                    proofStatus = "Error: \(error.localizedDescription)"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
+                }
+            }
         }
+    }
+
+    // MARK: - Logging helpers
+
+    private func logProofInputs(commitment: String, members: [String], message: String, scope: String, depth: Int) {
+        print("====== [Semaphore] Proof Inputs ======")
+        print("Identity commitment: \(commitment)")
+        print("Group members count: \(members.count)")
+        if members.isEmpty {
+            print("Members: []")
+        } else {
+            let preview = members.prefix(5).joined(separator: ", ")
+            print("Members preview (up to 5): [\(preview)]")
+        }
+        print("Message: \(message)")
+        print("Scope: \(scope)")
+        print("Merkle depth: \(depth)")
+        print("=====================================")
+    }
+
+    private func logProofOutput(_ proof: String) {
+        print("====== [Semaphore] Proof Output ======")
+        if let pretty = prettyPrintJSON(proof) {
+            print(pretty)
+        } else {
+            let snippet = proof.prefix(600)
+            print(String(snippet))
+            if proof.count > 600 { print("... (truncated) ...") }
+        }
+        print("=====================================")
+    }
+
+    private func prettyPrintJSON(_ jsonString: String) -> String? {
+        guard let data = jsonString.data(using: .utf8) else { return nil }
+        guard let obj = try? JSONSerialization.jsonObject(with: data, options: []) else { return nil }
+        guard let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .withoutEscapingSlashes]) else { return nil }
+        return String(data: prettyData, encoding: .utf8)
     }
 }
 

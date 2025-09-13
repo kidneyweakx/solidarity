@@ -20,6 +20,15 @@ final class SemaphoreIdentityManager: ObservableObject {
 
     private let keychain = IdentityKeychain()
 
+    // Whether the SemaphoreSwift library is available for proof ops
+    static var proofsSupported: Bool {
+        #if canImport(Semaphore)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     struct IdentityBundle: Codable, Equatable {
         let privateKey: Data        // trapdoor + nullifier source (as used by SemaphoreSwift)
         let commitment: String      // public commitment hex/string
@@ -74,14 +83,15 @@ final class SemaphoreIdentityManager: ObservableObject {
         #if canImport(Semaphore)
         guard let bundle = try? keychain.loadIdentity() else { throw Error.notInitialized }
         let identity = Identity(privateKey: bundle.privateKey)
-        let elements = groupCommitments.map { Element($0) }
-        let group = Group(members: elements)
+        // Build a minimal group that at least contains our own identity element.
+        // TODO: When available, convert external commitment strings to elements and include them.
+        let group = Group(members: [identity.toElement()])
         return try generateSemaphoreProof(
             identity: identity,
             group: group,
             message: message,
             scope: scope,
-            merkleTreeDepth: merkleDepth
+            merkleTreeDepth: UInt16(merkleDepth)
         )
         #else
         throw Error.unsupported
