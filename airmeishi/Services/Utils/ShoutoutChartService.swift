@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 /// Service for managing 3D chart visualization of users for shoutout discovery
 @MainActor
@@ -23,12 +24,21 @@ class ShoutoutChartService: ObservableObject {
     @Published var selectedCharacterType: CharacterType?
     
     private let contactRepository = ContactRepository.shared
+    private var cancellables = Set<AnyCancellable>()
     
     private init() {
         Task {
             await loadUsers()
             generateChartData()
         }
+        // Listen for live updates from contacts so shoutout reflects newly saved peers
+        contactRepository.$contacts
+            .sink { [weak self] contacts in
+                guard let self = self else { return }
+                self.users = contacts.map { self.mapContactToUser($0) }
+                self.generateChartData()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Data Management
@@ -37,26 +47,28 @@ class ShoutoutChartService: ObservableObject {
         let result = contactRepository.getAllContacts()
         switch result {
         case .success(let contacts):
-            users = contacts.map { contact in
-                ShoutoutUser(
-                    id: contact.id,
-                    name: contact.businessCard.name,
-                    company: contact.businessCard.company ?? "",
-                    title: contact.businessCard.title ?? "",
-                    email: contact.businessCard.email ?? "",
-                    profileImageURL: contact.businessCard.profileImageURL,
-                    tags: contact.tags,
-                    eventScore: calculateEventScore(for: contact),
-                    typeScore: calculateTypeScore(for: contact),
-                    characterScore: calculateCharacterScore(for: contact),
-                    lastInteraction: contact.lastInteraction ?? contact.receivedAt,
-                    verificationStatus: contact.verificationStatus
-                )
-            }
+            users = contacts.map { mapContactToUser($0) }
         case .failure(let error):
             print("Failed to load users: \(error)")
             users = []
         }
+    }
+
+    private func mapContactToUser(_ contact: Contact) -> ShoutoutUser {
+        return ShoutoutUser(
+            id: contact.id,
+            name: contact.businessCard.name,
+            company: contact.businessCard.company ?? "",
+            title: contact.businessCard.title ?? "",
+            email: contact.businessCard.email ?? "",
+            profileImageURL: contact.businessCard.profileImageURL,
+            tags: contact.tags,
+            eventScore: calculateEventScore(for: contact),
+            typeScore: calculateTypeScore(for: contact),
+            characterScore: calculateCharacterScore(for: contact),
+            lastInteraction: contact.lastInteraction ?? contact.receivedAt,
+            verificationStatus: contact.verificationStatus
+        )
     }
     
     func generateChartData() {

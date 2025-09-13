@@ -303,6 +303,10 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         
         info["level"] = level.rawValue
         info["timestamp"] = String(Int(Date().timeIntervalSince1970))
+        // Announce ZK capability so browsers can show a badge before proof arrives
+        info["zk"] = card.sharingPreferences.useZK ? "1" : "0"
+        let allowedCount = card.sharingPreferences.fieldsForLevel(level).count
+        info["zkf"] = String(allowedCount)
         
         return info
     }

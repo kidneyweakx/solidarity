@@ -9,11 +9,13 @@ import SwiftUI
 
 struct MatchingOrbitView: View {
     @StateObject private var proximityManager = ProximityManager.shared
+    @StateObject private var cardManager = CardManager.shared
     @State private var rotateOuter: Bool = false
     @State private var rotateMiddle: Bool = false
     @State private var rotateInner: Bool = false
     @State private var showNearbySheet: Bool = false
     @State private var showPeerCardSheet: Bool = false
+    @State private var showShareSheet: Bool = false
     
     var body: some View {
         ZStack {
@@ -66,6 +68,27 @@ struct MatchingOrbitView: View {
             rotateMiddle = true
             rotateInner = true
         }
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: { showShareSheet = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: proximityManager.getSharingStatus().isAdvertising ? "antenna.radiowaves.left.and.right" : "paperplane")
+                            Text(proximityManager.getSharingStatus().isAdvertising ? "Sharing" : "Share")
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.2))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                    }
+                    .padding()
+                }
+            }
+        )
         .sheet(isPresented: $showNearbySheet) {
             NearbyPeersSheet(
                 peers: proximityManager.nearbyPeers,
@@ -91,6 +114,18 @@ struct MatchingOrbitView: View {
                 }
                 .padding()
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareCardPickerSheet(
+                cards: cardManager.businessCards,
+                onStart: { card, level in
+                    proximityManager.startAdvertising(with: card, sharingLevel: level)
+                },
+                onStop: {
+                    proximityManager.stopAdvertising()
+                },
+                isAdvertising: proximityManager.getSharingStatus().isAdvertising
+            )
         }
     }
     
@@ -148,8 +183,15 @@ private struct NearbyPeersSheet: View {
                     List(peers) { peer in
                         HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(peer.cardName ?? peer.name)
-                                    .font(.headline)
+                                HStack(spacing: 6) {
+                                    Text(peer.cardName ?? peer.name)
+                                        .font(.headline)
+                                    if peer.discoveryInfo["zk"] == "1" {
+                                        Label("ZK", systemImage: "shield.checkerboard")
+                                            .labelStyle(.iconOnly)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
                                 HStack(spacing: 8) {
                                     if let title = peer.cardTitle { Text(title).font(.subheadline).foregroundColor(.secondary) }
                                     if let company = peer.cardCompany { Text(company).font(.subheadline).foregroundColor(.secondary) }
@@ -164,6 +206,15 @@ private struct NearbyPeersSheet: View {
                                     Image(systemName: v.systemImageName)
                                         .foregroundColor(v == .verified ? .green : (v == .failed ? .red : .orange))
                                     Text(v.displayName)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            } else if peer.discoveryInfo["zk"] == "1" {
+                                // Show pending if zk-capable but no proof yet
+                                HStack(spacing: 6) {
+                                    Image(systemName: VerificationStatus.pending.systemImageName)
+                                        .foregroundColor(.orange)
+                                    Text(VerificationStatus.pending.displayName)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -195,6 +246,60 @@ private struct NearbyPeersSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Share Card Picker Sheet
+
+private struct ShareCardPickerSheet: View {
+    let cards: [BusinessCard]
+    let onStart: (BusinessCard, SharingLevel) -> Void
+    let onStop: () -> Void
+    let isAdvertising: Bool
+    @Environment(\ .dismiss) private var dismiss
+    @State private var selectedCardId: UUID? = nil
+    @State private var level: SharingLevel = .professional
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Card") {
+                    Picker("Business Card", selection: $selectedCardId) {
+                        ForEach(cards) { card in
+                            Text(card.name).tag(Optional(card.id))
+                        }
+                    }
+                }
+                Section("Privacy Level") {
+                    Picker("Level", selection: $level) {
+                        ForEach(SharingLevel.allCases, id: \.self) { lvl in
+                            Text(lvl.displayName).tag(lvl)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                if let card = cards.first(where: { $0.id == selectedCardId }) {
+                    Section("Preview") {
+                        BusinessCardPreview(businessCard: card.filteredCard(for: level))
+                    }
+                }
+            }
+            .navigationTitle("Share Card")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if isAdvertising {
+                        Button("Stop") { onStop(); dismiss() }
+                    } else {
+                        Button("Start") {
+                            if let id = selectedCardId, let card = cards.first(where: { $0.id == id }) { onStart(card, level); dismiss() }
+                        }
+                        .disabled(selectedCardId == nil)
+                    }
+                }
+            }
+        }
+        .onAppear { if selectedCardId == nil { selectedCardId = cards.first?.id } }
     }
 }
 
