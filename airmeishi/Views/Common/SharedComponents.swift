@@ -111,6 +111,27 @@ struct TagChip: View {
         .cornerRadius(8)
     }
 }
+
+// MARK: - Keyboard Accessory Hiding
+
+extension View {
+    /// Hides the keyboard accessory (input assistant) bar across iOS versions.
+    func hideKeyboardAccessory() -> some View {
+        self.background(KeyboardAccessoryHider())
+    }
+}
+
+private struct KeyboardAccessoryHider: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView { UIView() }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        let tf = UITextField.appearance()
+        tf.inputAssistantItem.leadingBarButtonGroups = []
+        tf.inputAssistantItem.trailingBarButtonGroups = []
+        let tv = UITextView.appearance()
+        tv.inputAssistantItem.leadingBarButtonGroups = []
+        tv.inputAssistantItem.trailingBarButtonGroups = []
+    }
+}
 #Preview {
     VStack(spacing: 16) {
         ContactInfoRow(

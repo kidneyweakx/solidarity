@@ -127,6 +127,7 @@ struct SkillFormView: View {
                 }
             }
         }
+        .hideKeyboardAccessory()
     }
     
     private var isFormValid: Bool {

@@ -116,19 +116,22 @@ struct SharingPreferences: Codable, Equatable {
     var personalFields: Set<BusinessCardField>
     var allowForwarding: Bool
     var expirationDate: Date?
+    var useZK: Bool
     
     init(
         publicFields: Set<BusinessCardField> = [.name, .title, .company],
         professionalFields: Set<BusinessCardField> = [.name, .title, .company, .email, .skills],
         personalFields: Set<BusinessCardField> = BusinessCardField.allCases.asSet(),
         allowForwarding: Bool = false,
-        expirationDate: Date? = nil
+        expirationDate: Date? = nil,
+        useZK: Bool = false
     ) {
         self.publicFields = publicFields
         self.professionalFields = professionalFields
         self.personalFields = personalFields
         self.allowForwarding = allowForwarding
         self.expirationDate = expirationDate
+        self.useZK = useZK
     }
     
     /// Get allowed fields for a specific sharing level
@@ -141,6 +144,34 @@ struct SharingPreferences: Codable, Equatable {
         case .personal:
             return personalFields
         }
+    }
+}
+
+// MARK: - Codable compatibility for SharingPreferences (handle missing keys)
+
+extension SharingPreferences {
+    private enum CodingKeys: String, CodingKey {
+        case publicFields, professionalFields, personalFields, allowForwarding, expirationDate, useZK
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.publicFields = try container.decodeIfPresent(Set<BusinessCardField>.self, forKey: .publicFields) ?? [.name, .title, .company]
+        self.professionalFields = try container.decodeIfPresent(Set<BusinessCardField>.self, forKey: .professionalFields) ?? [.name, .title, .company, .email, .skills]
+        self.personalFields = try container.decodeIfPresent(Set<BusinessCardField>.self, forKey: .personalFields) ?? BusinessCardField.allCases.asSet()
+        self.allowForwarding = try container.decodeIfPresent(Bool.self, forKey: .allowForwarding) ?? false
+        self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
+        self.useZK = try container.decodeIfPresent(Bool.self, forKey: .useZK) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(publicFields, forKey: .publicFields)
+        try container.encode(professionalFields, forKey: .professionalFields)
+        try container.encode(personalFields, forKey: .personalFields)
+        try container.encode(allowForwarding, forKey: .allowForwarding)
+        try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
+        try container.encode(useZK, forKey: .useZK)
     }
 }
 

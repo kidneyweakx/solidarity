@@ -18,6 +18,7 @@ class QRCodeManager: NSObject, ObservableObject {
     @Published var isScanning = false
     @Published var isGenerating = false
     @Published var lastScannedCard: BusinessCard?
+    @Published var lastVerificationStatus: VerificationStatus?
     @Published var scanError: CardError?
     
     private let encryptionManager = EncryptionManager.shared
@@ -42,13 +43,47 @@ class QRCodeManager: NSObject, ObservableObject {
         // Create filtered card based on sharing level
         let filteredCard = businessCard.filteredCard(for: sharingLevel)
         
+        // Optional: generate selective disclosure proof when enabled
+        var sdProof: SelectiveDisclosureProof? = nil
+        if businessCard.sharingPreferences.useZK {
+            let allowed = businessCard.sharingPreferences.fieldsForLevel(sharingLevel)
+            let sdResult = ProofGenerationManager.shared.generateSelectiveDisclosureProof(
+                businessCard: businessCard,
+                selectedFields: allowed,
+                recipientId: nil
+            )
+            if case .success(let proof) = sdResult { sdProof = proof }
+        }
+        
+        // Load or create issuer identity commitment and optional proof
+        let identityBundle = SemaphoreIdentityManager.shared.getIdentity() ?? (try? SemaphoreIdentityManager.shared.loadOrCreateIdentity())
+        let issuerCommitment = identityBundle?.commitment ?? ""
+        var issuerProof: String? = nil
+        if !issuerCommitment.isEmpty {
+            // Bind proof to this share instance via shareId; compute after creating shareId
+        }
+        
         // Create sharing payload
+        let shareUUID = UUID()
+        if !issuerCommitment.isEmpty {
+            // Try to generate a Semaphore proof if supported; ignore errors in fallback
+            if SemaphoreIdentityManager.proofsSupported {
+                issuerProof = (try? SemaphoreIdentityManager.shared.generateProof(
+                    groupCommitments: [issuerCommitment],
+                    message: shareUUID.uuidString,
+                    scope: sharingLevel.rawValue
+                ))
+            }
+        }
         let sharingPayload = QRSharingPayload(
             businessCard: filteredCard,
             sharingLevel: sharingLevel,
             expirationDate: expirationDate ?? Date().addingTimeInterval(24 * 60 * 60), // 24 hours default
-            shareId: UUID(),
-            createdAt: Date()
+            shareId: shareUUID,
+            createdAt: Date(),
+            issuerCommitment: issuerCommitment.isEmpty ? nil : issuerCommitment,
+            issuerProof: issuerProof,
+            sdProof: sdProof
         )
         
         // Encrypt the payload
@@ -168,6 +203,21 @@ class QRCodeManager: NSObject, ObservableObject {
                 return
             }
             
+            // Verify issuer commitment / proof if present
+            let status = verifyIssuer(commitment: payload.issuerCommitment, proof: payload.issuerProof, message: payload.shareId.uuidString, scope: payload.sharingLevel.rawValue)
+            DispatchQueue.main.async {
+                self.lastVerificationStatus = status
+            }
+            
+            // Optionally verify selective disclosure proof if included
+            if let proof = payload.sdProof {
+                let vr = ProofGenerationManager.shared.verifySelectiveDisclosureProof(proof, expectedBusinessCardId: payload.businessCard.id.uuidString)
+                if case .success(let res) = vr, !res.isValid {
+                    // downgrade status if SD proof invalid
+                    DispatchQueue.main.async { self.lastVerificationStatus = .failed }
+                }
+            }
+            
             // Successfully decoded business card
             DispatchQueue.main.async {
                 self.lastScannedCard = payload.businessCard
@@ -273,6 +323,26 @@ class QRCodeManager: NSObject, ObservableObject {
             return .failure(.storageError("Failed to store sharing payload: \(error.localizedDescription)"))
         }
     }
+    
+    /// Validate issuer commitment and optional proof
+    private func verifyIssuer(commitment: String?, proof: String?, message: String, scope: String) -> VerificationStatus {
+        guard let commitment = commitment, !commitment.isEmpty else {
+            return .failed
+        }
+        // Basic hex validation
+        let hexSet = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+        let isHex = commitment.unicodeScalars.allSatisfy { hexSet.contains($0) }
+        if !isHex || commitment.count < 32 {
+            return .failed
+        }
+        // If we have a proof and library is available, verify
+        if let proof = proof, SemaphoreIdentityManager.proofsSupported {
+            let ok = (try? SemaphoreIdentityManager.shared.verifyProof(proof)) ?? false
+            return ok ? .verified : .failed
+        }
+        // Without a proof, mark as pending but acceptable commitment
+        return .pending
+    }
 }
 
 // MARK: - AVCaptureMetadataOutputObjectsDelegate
@@ -307,6 +377,9 @@ struct QRSharingPayload: Codable {
     let createdAt: Date
     let maxUses: Int?
     let currentUses: Int?
+    let issuerCommitment: String?
+    let issuerProof: String?
+    let sdProof: SelectiveDisclosureProof?
     
     init(
         businessCard: BusinessCard,
@@ -315,7 +388,10 @@ struct QRSharingPayload: Codable {
         shareId: UUID,
         createdAt: Date,
         maxUses: Int? = nil,
-        currentUses: Int? = nil
+        currentUses: Int? = nil,
+        issuerCommitment: String? = nil,
+        issuerProof: String? = nil,
+        sdProof: SelectiveDisclosureProof? = nil
     ) {
         self.businessCard = businessCard
         self.sharingLevel = sharingLevel
@@ -324,5 +400,8 @@ struct QRSharingPayload: Codable {
         self.createdAt = createdAt
         self.maxUses = maxUses
         self.currentUses = currentUses
+        self.issuerCommitment = issuerCommitment
+        self.issuerProof = issuerProof
+        self.sdProof = sdProof
     }
 }

@@ -54,10 +54,14 @@ struct BusinessCardFormView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                profileImageSection
-                basicInfoSection
-                contactInfoSection
-                if !isSimpleMode {
+                if isSimpleMode {
+                    basicInfoSection
+                    contactInfoSection
+                    simplePrivacySection
+                } else {
+                    profileImageSection
+                    basicInfoSection
+                    contactInfoSection
                     skillsSection
                     categoriesSection
                     privacySection
@@ -102,10 +106,43 @@ struct BusinessCardFormView: View {
                 }
             }
         }
+        .hideKeyboardAccessory()
     }
     
     // MARK: - Form Sections
     
+    private var simplePrivacySection: some View {
+        Section("Privacy") {
+            Toggle(isOn: Binding(
+                get: { businessCard.sharingPreferences.publicFields.isEmpty },
+                set: { enable in
+                    if enable {
+                        // Privacy mode: only share name by default
+                        businessCard.sharingPreferences.publicFields = [.name]
+                        businessCard.sharingPreferences.professionalFields = [.name, .title, .company]
+                        businessCard.sharingPreferences.personalFields = Set(BusinessCardField.allCases)
+                    } else {
+                        // Open mode: typical defaults
+                        businessCard.sharingPreferences.publicFields = [.name, .title, .company]
+                        businessCard.sharingPreferences.professionalFields = [.name, .title, .company, .email, .skills]
+                        businessCard.sharingPreferences.personalFields = Set(BusinessCardField.allCases)
+                    }
+                }
+            )) {
+                Text("Privacy Mode")
+            }
+            Toggle(isOn: Binding(
+                get: { businessCard.sharingPreferences.useZK },
+                set: { businessCard.sharingPreferences.useZK = $0 }
+            )) {
+                Text("Use ZK Selective Disclosure")
+            }
+            Text("When enabled, your public QR will reveal minimal info. You can switch to Advanced to fine-tune.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
     private var profileImageSection: some View {
         Section {
             HStack {

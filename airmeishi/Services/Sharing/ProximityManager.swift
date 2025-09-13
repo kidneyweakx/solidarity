@@ -31,6 +31,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
     @Published private(set) var connectionStatus: ProximityConnectionStatus = .disconnected
     @Published private(set) var lastError: CardError?
     @Published private(set) var receivedCards: [BusinessCard] = []
+    @Published private(set) var lastReceivedVerification: VerificationStatus?
     
     // MARK: - Private Properties
     private let serviceType = "airmeishi-share"
@@ -149,12 +150,38 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
             // Filter card based on sharing level
             let filteredCard = card.filteredCard(for: sharingLevel)
             
-            // Create sharing payload
+            // Create sharing payload with ZK issuer info
+            let shareUUID = UUID()
+            let identityBundle = SemaphoreIdentityManager.shared.getIdentity() ?? (try? SemaphoreIdentityManager.shared.loadOrCreateIdentity())
+            let issuerCommitment = identityBundle?.commitment ?? ""
+            var issuerProof: String? = nil
+            if !issuerCommitment.isEmpty && SemaphoreIdentityManager.proofsSupported {
+                issuerProof = (try? SemaphoreIdentityManager.shared.generateProof(
+                    groupCommitments: [issuerCommitment],
+                    message: shareUUID.uuidString,
+                    scope: sharingLevel.rawValue
+                ))
+            }
+            // Optional SD proof if enabled by sender's prefs
+            var sdProof: SelectiveDisclosureProof? = nil
+            if card.sharingPreferences.useZK {
+                let allowed = card.sharingPreferences.fieldsForLevel(sharingLevel)
+                let sdResult = ProofGenerationManager.shared.generateSelectiveDisclosureProof(
+                    businessCard: card,
+                    selectedFields: allowed,
+                    recipientId: peer.displayName
+                )
+                if case .success(let proof) = sdResult { sdProof = proof }
+            }
             let payload = ProximitySharingPayload(
                 card: filteredCard,
                 sharingLevel: sharingLevel,
                 timestamp: Date(),
-                senderID: localPeerID.displayName
+                senderID: localPeerID.displayName,
+                shareId: shareUUID,
+                issuerCommitment: issuerCommitment.isEmpty ? nil : issuerCommitment,
+                issuerProof: issuerProof,
+                sdProof: sdProof
             )
             
             let data = try JSONEncoder().encode(payload)
@@ -304,7 +331,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
             .store(in: &cancellables)
     }
     
-    private func handleReceivedCard(_ card: BusinessCard, from senderName: String) {
+    private func handleReceivedCard(_ card: BusinessCard, from senderName: String, status: VerificationStatus) {
         // Add to received cards
         receivedCards.append(card)
         
@@ -313,7 +340,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
             let contact = Contact(
                 businessCard: card,
                 source: .proximity,
-                verificationStatus: .unverified
+                verificationStatus: status
             )
             
             let result = contactRepository.addContact(contact)
@@ -414,9 +441,20 @@ extension ProximityManager: MCSessionDelegate {
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         do {
             let payload = try JSONDecoder().decode(ProximitySharingPayload.self, from: data)
-            
+            let status = ProximityVerificationHelper.verify(
+                commitment: payload.issuerCommitment,
+                proof: payload.issuerProof,
+                message: payload.shareId.uuidString,
+                scope: payload.sharingLevel.rawValue
+            )
             DispatchQueue.main.async { [weak self] in
-                self?.handleReceivedCard(payload.card, from: payload.senderID)
+                guard let self = self else { return }
+                self.lastReceivedVerification = status
+                // Update verification on matching peer in nearby list if found
+                if let index = self.nearbyPeers.firstIndex(where: { $0.peerID == peerID }) {
+                    self.nearbyPeers[index].verification = status
+                }
+                self.handleReceivedCard(payload.card, from: payload.senderID, status: status)
             }
             
         } catch {
@@ -511,6 +549,7 @@ struct ProximityPeer: Identifiable, Equatable {
     let discoveryInfo: [String: String]
     let discoveredAt: Date
     var status: ProximityPeerStatus = .disconnected
+    var verification: VerificationStatus? = nil
     
     var name: String {
         return peerID.displayName
@@ -587,13 +626,7 @@ enum ProximityConnectionStatus: String, CaseIterable {
     }
 }
 
-/// Payload structure for proximity sharing
-struct ProximitySharingPayload: Codable {
-    let card: BusinessCard
-    let sharingLevel: SharingLevel
-    let timestamp: Date
-    let senderID: String
-}
+/// Payload structure moved to ProximityPayload.swift
 
 /// Current sharing status information
 struct ProximitySharingStatus {

@@ -146,16 +146,28 @@ private struct NearbyPeersSheet: View {
                     .background(Color(UIColor.systemBackground))
                 } else {
                     List(peers) { peer in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(peer.cardName ?? peer.name)
-                                .font(.headline)
-                            HStack(spacing: 8) {
-                                if let title = peer.cardTitle { Text(title).font(.subheadline).foregroundColor(.secondary) }
-                                if let company = peer.cardCompany { Text(company).font(.subheadline).foregroundColor(.secondary) }
+                        HStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(peer.cardName ?? peer.name)
+                                    .font(.headline)
+                                HStack(spacing: 8) {
+                                    if let title = peer.cardTitle { Text(title).font(.subheadline).foregroundColor(.secondary) }
+                                    if let company = peer.cardCompany { Text(company).font(.subheadline).foregroundColor(.secondary) }
+                                }
+                                Text(peer.status.rawValue)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            Text(peer.status.rawValue)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            Spacer()
+                            if let v = peer.verification {
+                                HStack(spacing: 6) {
+                                    Image(systemName: v.systemImageName)
+                                        .foregroundColor(v == .verified ? .green : (v == .failed ? .red : .orange))
+                                    Text(v.displayName)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                         .padding(.vertical, 2)
                     }

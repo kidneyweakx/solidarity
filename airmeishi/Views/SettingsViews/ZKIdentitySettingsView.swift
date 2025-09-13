@@ -68,6 +68,7 @@ struct ZKIdentitySettingsView: View {
         .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
         .onAppear { refresh()
         }
+        .hideKeyboardAccessory()
     }
 
     private func refresh() {

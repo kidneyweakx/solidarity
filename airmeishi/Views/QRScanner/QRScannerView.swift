@@ -16,6 +16,7 @@ struct QRScannerView: View {
     
     @State private var showingScannedCard = false
     @State private var showingError = false
+    @State private var lastVerification: VerificationStatus = .unverified
     @State private var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
     @State private var showingPermissionAlert = false
     @State private var permissionAlertMessage = ""
@@ -96,6 +97,7 @@ struct QRScannerView: View {
         }
         .onChange(of: qrManager.lastScannedCard) { _, scannedCard in
             if scannedCard != nil {
+                lastVerification = qrManager.lastVerificationStatus ?? .unverified
                 showingScannedCard = true
             }
         }
@@ -106,7 +108,7 @@ struct QRScannerView: View {
         }
         .sheet(isPresented: $showingScannedCard) {
             if let scannedCard = qrManager.lastScannedCard {
-                ScannedCardView(businessCard: scannedCard) {
+                ScannedCardView(businessCard: scannedCard, verification: lastVerification) {
                     // Save to contacts
                     saveScannedCard(scannedCard)
                 }
@@ -181,7 +183,7 @@ struct QRScannerView: View {
             source: .qrCode,
             tags: [],
             notes: nil,
-            verificationStatus: .unverified
+            verificationStatus: lastVerification
         )
         
         let result = contactRepository.addContact(contact)
@@ -301,6 +303,7 @@ struct RoundedCorner: Shape {
 
 struct ScannedCardView: View {
     let businessCard: BusinessCard
+    let verification: VerificationStatus
     let onSave: () -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -328,6 +331,15 @@ struct ScannedCardView: View {
                                         .font(.system(size: 40))
                                         .foregroundColor(.gray)
                                 )
+                        }
+                        HStack(spacing: 8) {
+                            Image(systemName: verification.systemImageName)
+                                .foregroundColor(
+                                    verification == .verified ? .green : (verification == .failed ? .red : .orange)
+                                )
+                            Text(verification.displayName)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                         
                         Text(businessCard.name)
