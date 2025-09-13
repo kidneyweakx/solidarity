@@ -23,7 +23,6 @@ struct EventParticipation: Codable, Identifiable, Hashable {
     var notes: String?
     
     enum VerificationMethod: String, Codable {
-        case zkemail
         case manual
     }
 }

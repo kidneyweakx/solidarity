@@ -2,16 +2,11 @@
 //  SemaphoreService.swift
 //  airmeishi
 //
-//  NOTE: This file is intentionally commented out. It outlines a future
-//  integration with Semaphore for privacy-preserving selective disclosure.
-//  Do NOT include in the build yet.
+//  NOTE: This file remains as design notes; functionality moved into
+//  `SemaphoreIdentityManager` and `SemaphoreGroupManager` with canImport guards.
 //
 //  TODO:
 //  - Add SwiftPM dependency for `SemaphoreSwift` when ready
-//  - Wire identity creation and group membership
-//  - Generate and verify proofs on-device
-//  - Expose simple APIs for proof over business card fields
-//  - Persist identity securely in Keychain
 //  - Map `SharingLevel` -> scope/message
 //
 //  Reference: https://github.com/zkmopro/SemaphoreSwift

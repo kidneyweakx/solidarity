@@ -209,7 +209,7 @@
 			mainGroup = F1133D752E70600A0097A2A4;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F11342292E71DDDC0097A2A4 /* XCRemoteSwiftPackageReference "zkemail-swift-package" */,
+				F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
@@ -623,9 +623,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F11342292E71DDDC0097A2A4 /* XCRemoteSwiftPackageReference "zkemail-swift-package" */ = {
+		F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/zkmopro/zkemail-swift-package";
+			repositoryURL = "https://github.com/zkmopro/SemaphoreSwift";
 			requirement = {
 				branch = main;
 				kind = branch;

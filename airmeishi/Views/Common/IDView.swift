@@ -24,190 +24,134 @@ enum EventLayoutMode: String, CaseIterable, Identifiable {
 }
 
 struct IDView: View {
-    @StateObject private var repo = EventRepository.shared
-    @State private var mode: EventLayoutMode = .list
-    @State private var showingImporter = false
+    @StateObject private var idm = SemaphoreIdentityManager.shared
+    @StateObject private var group = SemaphoreGroupManager.shared
     @State private var showingSettings = false
-    @State private var importError: String?
-    
+    @State private var identityCommitment: String = ""
+    @State private var proofStatus: String?
+    @State private var ringActiveCount: Int = 0
+    @State private var isPressing: Bool = false
+    @State private var ringTimer: Timer?
+
     var body: some View {
         NavigationStack {
-            content
-                .navigationTitle("ID")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Picker("Layout", selection: $mode) {
-                            ForEach(EventLayoutMode.allCases) { m in
-                                Text(m.title).tag(m)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 220)
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack(spacing: 12) {
-                            Button {
-                                showingImporter = true
-                            } label: {
-                                Image(systemName: "square.and.arrow.down")
-                            }
-                            Button {
-                                showingSettings = true
-                            } label: {
-                                Image(systemName: "gear")
-                            }
-                        }
+            GeometryReader { geo in
+                ZStack {
+                    let base = min(geo.size.width, geo.size.height)
+                    ringView(size: base * 0.80, index: 1)
+                    ringView(size: base * 0.62, index: 2)
+                    ringView(size: base * 0.46, index: 3)
+                    centerButton(size: base * 0.36)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .navigationTitle("ID")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gear")
                     }
                 }
-        }
-        .fileImporter(isPresented: $showingImporter, allowedContentTypes: [UTType(filenameExtension: "eml")!]) { result in
-            handleImport(result: result)
+            }
         }
         .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                List {
-                    NavigationLink("Privacy Settings") {
-                        PrivacySettingsHost()
-                    }
-                    NavigationLink("Backup Settings") {
-                        BackupSettingsView()
-                    }
-                }
-                .navigationTitle("Settings")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") { showingSettings = false }
-                    }
-                }
-            }
+            NavigationStack { ZKIdentitySettingsView() }
         }
-        .alert("Import Failed", isPresented: Binding(
-            get: { importError != nil },
-            set: { if !$0 { importError = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(importError ?? "")
-        }
-        .onAppear { _ = repo.load() }
-    }
-    
-    @ViewBuilder
-    private var content: some View {
-        switch mode {
-        case .list:
-            ListView(events: repo.events.sortedByEventDateDesc())
-        case .grid:
-            GridView(events: repo.events.sortedByEventDateDesc())
-        case .timeline:
-            TimelineView(events: repo.events.sortedByEventDateDesc())
+        .onAppear {
+            if let id = idm.getIdentity() { identityCommitment = id.commitment }
         }
     }
-    
-    private func handleImport(result: Result<URL, Error>) {
+
+    private func ringView(size: CGFloat, index: Int) -> some View {
+        Circle()
+            .stroke(lineWidth: 8)
+            .foregroundColor(index <= ringActiveCount ? Color.accentColor : Color.gray.opacity(0.2))
+            .frame(width: size, height: size)
+            .animation(.easeInOut(duration: 0.3), value: ringActiveCount)
+    }
+
+    private func centerButton(size: CGFloat) -> some View {
+        let longPressDuration: Double = 3.0
+        return ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [.accentColor, .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: size, height: size)
+                .shadow(color: .accentColor.opacity(isPressing ? 0.6 : 0.25), radius: isPressing ? 20 : 10)
+                .overlay(
+                    VStack(spacing: 6) {
+                        Text("ID")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                        if let status = proofStatus {
+                            Text(status)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.9))
+                        } else if !identityCommitment.isEmpty {
+                            Text("Commitment ready")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.9))
+                        } else {
+                            Text("Tap: ID + Proof\nHold: Create Group")
+                                .font(.caption2)
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                    }
+                )
+                .onTapGesture { tapAction() }
+                .onLongPressGesture(minimumDuration: longPressDuration, maximumDistance: 50, pressing: { pressing in
+                    isPressing = pressing
+                    if pressing { startRingAnimation() } else { stopRingAnimation(reset: true) }
+                }, perform: {
+                    stopRingAnimation(reset: false)
+                    longPressAction()
+                })
+        }
+    }
+
+    private func startRingAnimation() {
+        ringActiveCount = 0
+        ringTimer?.invalidate()
+        ringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            ringActiveCount = min(3, ringActiveCount + 1)
+            if ringActiveCount >= 3 { timer.invalidate() }
+        }
+    }
+
+    private func stopRingAnimation(reset: Bool) {
+        ringTimer?.invalidate()
+        ringTimer = nil
+        if reset { ringActiveCount = 0 }
+    }
+
+    private func tapAction() {
         do {
-            let url = try result.get()
-            let data = try Data(contentsOf: url)
-            let zk = ZKEmailVerificationManager.shared
-            let info = try zk.parseLumaEmail(data).get()
-            let verified = try zk.verifyLumaEmailWithZK(data, srsPath: nil).get()
-            let participation = EventParticipation(
-                id: UUID().uuidString,
-                eventId: info.eventId,
-                eventName: info.eventName,
-                organizer: info.organizer,
-                eventDate: info.eventDate,
-                location: info.location,
-                sourceEmail: info.fromAddress,
-                verificationMethod: .zkemail,
-                isVerified: verified,
-                proofDataPath: nil,
-                createdAt: Date(),
-                updatedAt: Date(),
-                notes: info.subject
-            )
-            let _ = repo.upsert(participation)
+            let bundle = try idm.loadOrCreateIdentity()
+            identityCommitment = bundle.commitment
+            if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
+            let proof = try idm.generateProof(groupCommitments: group.members, message: "hello", scope: "public", merkleDepth: 16)
+            proofStatus = "Proof generated"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+            _ = proof
         } catch {
-            importError = error.localizedDescription
+            proofStatus = "Error: \(error.localizedDescription)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
         }
     }
-}
 
-private struct ListView: View {
-    let events: [EventParticipation]
-    var body: some View {
-        List(events) { e in
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(e.eventName).font(.headline)
-                    Text(e.eventDate, style: .date).font(.subheadline).foregroundColor(.secondary)
-                    if let loc = e.location, !loc.isEmpty { Text(loc).font(.caption).foregroundColor(.secondary) }
-                }
-                Spacer()
-                Image(systemName: e.isVerified ? "checkmark.seal.fill" : "exclamationmark.triangle")
-                    .foregroundColor(e.isVerified ? .green : .orange)
-            }
+    private func longPressAction() {
+        do {
+            let bundle = try idm.loadOrCreateIdentity()
+            identityCommitment = bundle.commitment
+            group.setMembers([bundle.commitment])
+            proofStatus = "Group created"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+        } catch {
+            proofStatus = "Error: \(error.localizedDescription)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
         }
-        .listStyle(.insetGrouped)
-    }
-}
-
-private struct GridView: View {
-    let events: [EventParticipation]
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
-    var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(events) { e in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(e.eventName).font(.headline).lineLimit(2)
-                            Spacer()
-                            Image(systemName: e.isVerified ? "checkmark.seal.fill" : "exclamationmark.triangle")
-                                .foregroundColor(e.isVerified ? .green : .orange)
-                        }
-                        Text(e.eventDate, style: .date).font(.caption).foregroundColor(.secondary)
-                        if let loc = e.location, !loc.isEmpty { Text(loc).font(.caption2).foregroundColor(.secondary) }
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemBackground)))
-                }
-            }
-            .padding()
-        }
-    }
-}
-
-private struct TimelineView: View {
-    let events: [EventParticipation]
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                ForEach(events) { e in
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack {
-                            Circle().fill(e.isVerified ? .green : .orange).frame(width: 10, height: 10)
-                            Rectangle().fill(Color.secondary).frame(width: 2, height: 40)
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(e.eventName).font(.headline)
-                            Text(e.eventDate, style: .date).font(.subheadline).foregroundColor(.secondary)
-                            if let loc = e.location, !loc.isEmpty { Text(loc).font(.caption).foregroundColor(.secondary) }
-                        }
-                        Spacer()
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-        }
-    }
-}
-
-private struct PrivacySettingsHost: View {
-    @State private var prefs = SharingPreferences()
-    var body: some View {
-        PrivacySettingsView(sharingPreferences: $prefs)
     }
 }
 

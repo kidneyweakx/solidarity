@@ -22,6 +22,8 @@ struct BusinessCardFormView: View {
     @State private var alertMessage = ""
     @State private var isLoading = false
     @State private var isSimpleMode = true
+    @State private var showingWalletPassSheet = false
+    @State private var createdCardForWallet: BusinessCard?
     
     // Skills management
     @State private var newSkillName = ""
@@ -90,6 +92,14 @@ struct BusinessCardFormView: View {
             .photosPicker(isPresented: $showingImagePicker, selection: $selectedPhotoItem, matching: .images)
             .onChange(of: selectedPhotoItem) { _, newItem in
                 loadSelectedImage(newItem)
+            }
+            .sheet(isPresented: $showingWalletPassSheet, onDismiss: { dismiss() }) {
+                if let card = createdCardForWallet {
+                    WalletPassGenerationView(
+                        businessCard: card,
+                        sharingLevel: .professional
+                    )
+                }
             }
         }
     }
@@ -319,7 +329,12 @@ struct BusinessCardFormView: View {
         switch result {
         case .success(let savedCard):
             onSave(savedCard)
-            dismiss()
+            if isEditing {
+                dismiss()
+            } else {
+                createdCardForWallet = savedCard
+                showingWalletPassSheet = true
+            }
         case .failure(let error):
             alertMessage = error.localizedDescription
             showingAlert = true
