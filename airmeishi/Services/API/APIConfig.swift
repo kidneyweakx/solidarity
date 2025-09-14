@@ -15,8 +15,8 @@ struct APIConfig {
         return URL(string: "https://luftdeck.sololin.xyz/")!
     }
     
-    /// Request timeout interval
-    static let requestTimeout: TimeInterval = 15
+    /// Request timeout interval (seconds)
+    static let requestTimeout: TimeInterval = 300
     
     /// WebSocket ping interval (seconds)
     static let webSocketPingInterval: TimeInterval = 20
