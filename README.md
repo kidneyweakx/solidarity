@@ -80,7 +80,7 @@ Built for iOS, the app allows users to share business cards through multiple cha
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/solidarity/airmeishi.git
+git clone https://github.com/kidneyweakx/Luft-Deck.git
 cd airmeishi
 ```
 
@@ -175,4 +175,4 @@ This project is licensed under the Apache 2.0 - see the [LICENSE](LICENSE) file 
 
 ---
 
-**AirMeishi** - Privacy-preserving business card sharing for the decentralized web.
+**Luft Deck** - Privacy-preserving business card sharing for the decentralized web.
