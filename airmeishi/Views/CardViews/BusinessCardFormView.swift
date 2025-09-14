@@ -152,24 +152,6 @@ struct BusinessCardFormView: View {
     private var simplePrivacySection: some View {
         Section {
             Toggle(isOn: Binding(
-                get: { businessCard.sharingPreferences.publicFields.isEmpty },
-                set: { enable in
-                    if enable {
-                        // Privacy mode: only share name by default
-                        businessCard.sharingPreferences.publicFields = [.name]
-                        businessCard.sharingPreferences.professionalFields = [.name, .title, .company]
-                        businessCard.sharingPreferences.personalFields = Set(BusinessCardField.allCases)
-                    } else {
-                        // Open mode: typical defaults
-                        businessCard.sharingPreferences.publicFields = [.name, .title, .company]
-                        businessCard.sharingPreferences.professionalFields = [.name, .title, .company, .email, .skills]
-                        businessCard.sharingPreferences.personalFields = Set(BusinessCardField.allCases)
-                    }
-                }
-            )) {
-                Text("Privacy Mode")
-            }
-            Toggle(isOn: Binding(
                 get: { businessCard.sharingPreferences.useZK },
                 set: { businessCard.sharingPreferences.useZK = $0 }
             )) {
@@ -260,7 +242,7 @@ struct BusinessCardFormView: View {
             }
             .foregroundColor(.blue)
         } header: {
-            Text("Contact Information")
+            Text("Contact Information (Sensitive Information)")
         }
     }
 

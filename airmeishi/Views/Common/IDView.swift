@@ -96,13 +96,17 @@ struct IDView: View {
     private func ringView(size: CGFloat, index: Int) -> some View {
         Circle()
             .stroke(lineWidth: 8)
-            .foregroundColor(index <= ringActiveCount ? Color.accentColor : Color.gray.opacity(0.2))
+            .foregroundColor(
+                index == 1
+                ? Color.gray.opacity(0.2)
+                : (index <= ringActiveCount ? Color.accentColor : Color.gray.opacity(0.2))
+            )
             .frame(width: size, height: size)
             .animation(.easeInOut(duration: 0.3), value: ringActiveCount)
     }
 
     private func centerButton(size: CGFloat) -> some View {
-        let longPressDuration: Double = 3.0
+        let longPressDuration: Double = 1.5
         return ZStack {
             Circle()
                 .fill(
@@ -138,7 +142,7 @@ struct IDView: View {
                                     .padding(.vertical, 4)
                                     .background(Color.black.opacity(0.20))
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
-                                Text("Tap to copy")
+                                Text("Tap to prove")
                                     .font(.caption2)
                                     .foregroundColor(.white.opacity(0.9))
                             }
@@ -157,8 +161,19 @@ struct IDView: View {
                 .onTapGesture { tapAction() }
                 .onLongPressGesture(minimumDuration: longPressDuration, maximumDistance: 50, pressing: { pressing in
                     isPressing = pressing
-                    if pressing { startRingAnimation() } else { stopRingAnimation(reset: true) }
+                    if pressing {
+                        startRingAnimation()
+                        #if canImport(UIKit)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
+                    } else {
+                        // Keep the rings lit at their last state until action perform finishes
+                        stopRingAnimation(reset: false)
+                    }
                 }, perform: {
+                    #if canImport(UIKit)
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    #endif
                     stopRingAnimation(reset: false)
                     longPressAction()
                 })
@@ -166,9 +181,9 @@ struct IDView: View {
     }
 
     private func startRingAnimation() {
-        ringActiveCount = 0
+        ringActiveCount = 1
         ringTimer?.invalidate()
-        ringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        ringTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
             ringActiveCount = min(3, ringActiveCount + 1)
             if ringActiveCount >= 3 { timer.invalidate() }
         }
@@ -186,32 +201,37 @@ struct IDView: View {
         proofStatus = "Working..."
         DispatchQueue.global(qos: .userInitiated).async {
             do {
+                // Ensure identity exists
+                let bundle = try idm.loadOrCreateIdentity()
                 if identityCommitment.isEmpty {
-                    // First time: create ID and show commitment; do not regenerate later
-                    let bundle = try idm.loadOrCreateIdentity()
+                    DispatchQueue.main.async { identityCommitment = bundle.commitment }
+                }
+                // Ensure membership includes self
+                if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
+                // Generate proof if supported
+                if !SemaphoreIdentityManager.proofsSupported {
                     DispatchQueue.main.async {
-                        identityCommitment = bundle.commitment
-                        proofStatus = bundle.commitment.isEmpty ? "ID created (pending)" : "ID created"
+                        proofStatus = "Proofs unavailable"
                         isWorking = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                     }
-                    if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
-                } else {
-                    // Already have ID: copy commitment
-                    #if canImport(UIKit)
-                    DispatchQueue.main.async {
-                        UIPasteboard.general.string = identityCommitment
-                        proofStatus = "Copied"
-                        isWorking = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
-                    }
-                    #else
-                    DispatchQueue.main.async {
-                        proofStatus = "Commitment ready"
-                        isWorking = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
-                    }
-                    #endif
+                    return
+                }
+                let message = UUID().uuidString
+                let scope = "id_tap"
+                logProofInputs(commitment: bundle.commitment, members: group.members, message: message, scope: scope, depth: 16)
+                let proof = try idm.generateProof(
+                    groupCommitments: group.members.isEmpty ? [bundle.commitment] : group.members,
+                    message: message,
+                    scope: scope,
+                    merkleDepth: 16
+                )
+                logProofOutput(proof)
+                DispatchQueue.main.async {
+                    latestProof = proof
+                    proofStatus = "Proof generated"
+                    isWorking = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
                 }
             } catch {
                 ZKLog.error("Error on tapAction: \(error.localizedDescription)")
@@ -310,6 +330,7 @@ struct IDView: View {
                 Button("Verify Proof") { verifyProofAction() }
                     .buttonStyle(.borderedProminent)
                     .disabled(!SemaphoreIdentityManager.proofsSupported || latestProof == nil || isWorking)
+                    .foregroundColor(.gray)
             }
             if isEditingProof {
                 Text("Editing mode (triple tap center to toggle)")

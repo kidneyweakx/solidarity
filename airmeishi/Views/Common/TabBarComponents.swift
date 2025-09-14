@@ -75,6 +75,7 @@ enum MainAppTab: Int, CaseIterable {
 
 struct CustomFloatingTabBar: View {
     @Binding var selectedTab: Int
+    var onIdTabTapped: (() -> Void)? = nil
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -97,6 +98,7 @@ struct CustomFloatingTabBar: View {
                 Spacer(minLength: 20)
                 TabBarButton(systemName: "target", title: "ID", isSelected: selectedTab == MainAppTab.id.rawValue) {
                     selectedTab = MainAppTab.id.rawValue
+                    onIdTabTapped?()
                 }
             }
             .frame(height: 64)
