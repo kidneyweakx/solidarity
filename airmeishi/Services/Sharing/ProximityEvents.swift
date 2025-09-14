@@ -14,6 +14,7 @@ extension Notification.Name {
     static let matchingError = Notification.Name("matchingError")
     static let groupInviteReceived = Notification.Name("groupInviteReceived")
     static let groupJoinAccepted = Notification.Name("groupJoinAccepted")
+    static let groupMembershipUpdated = Notification.Name("groupMembershipUpdated")
 }
 
 enum ProximityEventKey {
@@ -23,6 +24,7 @@ enum ProximityEventKey {
     static let error = "error"
     static let invite = "invite"
     static let peerID = "peerID"
+    static let groupId = "groupId"
 }
 
 

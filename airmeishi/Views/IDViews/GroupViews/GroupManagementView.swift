@@ -46,6 +46,10 @@ struct GroupManagementView: View {
         .onReceive(NotificationCenter.default.publisher(for: .groupInviteReceived)) { _ in
             // A separate global UI can present ConnectGroupInvitePopupView when needed
         }
+        .onReceive(NotificationCenter.default.publisher(for: .groupMembershipUpdated)) { _ in
+            // Refresh published state to reflect latest membership/root
+            group.load()
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .root:
@@ -187,6 +191,20 @@ struct GroupManagementView: View {
     private var AddMemberSheet: some View {
         NavigationView {
             Form {
+                Section("Nearby Matching") {
+                    HStack {
+                        Label(proximity.isBrowsing ? "Scanning Nearby" : "Scan Nearby", systemImage: proximity.isBrowsing ? "dot.radiowaves.right" : "dot.radiowaves.left.and.right")
+                        Spacer()
+                        Button(proximity.isBrowsing ? "Stop" : "Start") {
+                            if proximity.isBrowsing {
+                                proximity.stopBrowsing()
+                            } else {
+                                proximity.startBrowsing()
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
                 Section("Add Member") {
                     TextField("Commitment", text: $newMemberCommitment)
                         .textInputAutocapitalization(.never)
@@ -219,8 +237,8 @@ struct GroupManagementView: View {
                                     }
                                     Spacer()
                                     Button {
-                                        let inviter = BusinessCard.sample.name
-                                        proximity.sendGroupInvite(to: peer.peerID, group: g, inviterName: inviter)
+                                        let inviter = (try? CardManager.shared.getAllCards().get().first?.name) ?? CardManager.shared.businessCards.first?.name ?? UIDevice.current.name
+                                        proximity.invitePeerToGroup(peer, group: g, inviterName: inviter)
                                     } label: {
                                         Image(systemName: "paperplane.fill")
                                     }
@@ -232,6 +250,12 @@ struct GroupManagementView: View {
             }
             .navigationTitle("Add User")
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { activeSheet = nil } } }
+            .onAppear {
+                if !proximity.isBrowsing { proximity.startBrowsing() }
+            }
+            .onDisappear {
+                if proximity.isBrowsing { proximity.stopBrowsing() }
+            }
         }
     }
 

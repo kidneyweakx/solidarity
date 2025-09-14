@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import CryptoKit
 
 #if canImport(Semaphore)
 import Semaphore
@@ -88,32 +89,15 @@ final class SemaphoreGroupManager: ObservableObject {
     // MARK: - Root
 
     func recomputeRoot() {
-        #if canImport(Semaphore)
         guard let gid = selectedGroupId, let idx = allGroups.firstIndex(where: { $0.id == gid }) else {
             onMain { [weak self] in self?.merkleRoot = nil }
             return
         }
-        var newRoot: String? = nil
-        if let bundle = SemaphoreIdentityManager.shared.getIdentity() {
-            let identity = Identity(privateKey: bundle.privateKey)
-            let group = Group(members: [identity.toElement()])
-            if let rootData = group.root() {
-                newRoot = rootData.map { String(format: "%02x", $0) }.joined()
-            }
-        }
-        onMain { [weak self] in
-            guard let self = self else { return }
-            self.allGroups[idx].root = newRoot
-            self.merkleRoot = newRoot
-        }
-        #else
-        guard let gid = selectedGroupId, let idx = allGroups.firstIndex(where: { $0.id == gid }) else { return }
-        let newRoot = String(allGroups[idx].members.joined(separator: ":").hashValue)
+        let newRoot = computePseudoRoot(for: allGroups[idx])
         onMain { [weak self] in
             self?.allGroups[idx].root = newRoot
             self?.merkleRoot = newRoot
         }
-        #endif
     }
 
     /// Update the current Merkle root from an external source (API/chain)
@@ -149,10 +133,38 @@ final class SemaphoreGroupManager: ObservableObject {
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
         recomputeRoot()
-        // Auto-create a simple card with the group name for now
+        // Auto-create a simple card for this group
         let cardName = name
-        let card = BusinessCard(name: cardName)
+        let card = BusinessCard(name: cardName, categories: ["group_card", "group:\(g.id.uuidString)"])
         _ = CardManager.shared.createCard(card)
+        return g
+    }
+
+    /// Ensure a group from an invite exists locally with the provided id/name/root; select it and create a card if needed
+    @discardableResult
+    func ensureGroupFromInvite(id: UUID, name: String, root: String?) -> ManagedGroup {
+        if let idx = allGroups.firstIndex(where: { $0.id == id }) {
+            onMain { [weak self] in
+                guard let self = self else { return }
+                if let root = root { self.allGroups[idx].root = root }
+                self.selectedGroupId = id
+                self.applySelectedToPublished()
+            }
+            DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+            return allGroups[idx]
+        }
+        let g = ManagedGroup(id: id, name: name, createdAt: Date(), members: [], root: root)
+        onMain { [weak self] in
+            guard let self = self else { return }
+            self.allGroups.append(g)
+            self.selectedGroupId = g.id
+            self.applySelectedToPublished()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+        // Create a simple card for this group if one does not exist with same name
+        if case .success(let cards) = CardManager.shared.getAllCards(), !cards.contains(where: { $0.categories.contains("group_card") && $0.categories.contains("group:\(g.id.uuidString)") }) {
+            _ = CardManager.shared.createCard(BusinessCard(name: name, categories: ["group_card", "group:\(g.id.uuidString)"]))
+        }
         return g
     }
 
@@ -164,17 +176,7 @@ final class SemaphoreGroupManager: ObservableObject {
     }
 
     private func updateRootForGroup(at index: Int) {
-        #if canImport(Semaphore)
-        var newRoot: String? = nil
-        if let bundle = SemaphoreIdentityManager.shared.getIdentity() {
-            let identity = Identity(privateKey: bundle.privateKey)
-            let group = Group(members: [identity.toElement()])
-            if let rootData = group.root() { newRoot = rootData.map { String(format: "%02x", $0) }.joined() }
-        }
-        self.allGroups[index].root = newRoot
-        #else
-        self.allGroups[index].root = String(self.allGroups[index].members.joined(separator: ":").hashValue)
-        #endif
+        self.allGroups[index].root = computePseudoRoot(for: self.allGroups[index])
     }
 
     private func applySelectedToPublished() {
@@ -185,6 +187,15 @@ final class SemaphoreGroupManager: ObservableObject {
             self.members = []
             self.merkleRoot = nil
         }
+    }
+
+    // MARK: - Root helper
+    private func computePseudoRoot(for group: ManagedGroup) -> String {
+        // Deterministic, stable root based on group id and sorted members
+        let sorted = group.members.sorted()
+        let payload = group.id.uuidString + "|" + sorted.joined(separator: "|")
+        let digest = SHA256.hash(data: Data(payload.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - Sync (Placeholders)

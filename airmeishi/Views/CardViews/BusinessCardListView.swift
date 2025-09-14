@@ -470,7 +470,7 @@ private struct EmptyWalletView: View {
             Text("Add a card or scan to get started").foregroundColor(.white.opacity(0.7))
             HStack(spacing: 12) {
                 Button("Add Card", action: onCreate).buttonStyle(.borderedProminent)
-                Button("Scan Card", action: onScan).buttonStyle(.bordered)
+                Button("Scan Card", action: onScan).buttonStyle(.bordered).foregroundColor(.gray)
             }
         }
         .padding()

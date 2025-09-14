@@ -87,7 +87,7 @@ struct ConnectGroupInvitePopupView: View {
         Group {
             switch phase {
             case .idle:
-                Text("Accept to join this group and share your identity commitment.")
+                Text("Accept to join this group. Your identity commitment will be sent to the inviter.")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
@@ -174,7 +174,8 @@ struct ConnectGroupInvitePopupView: View {
             withAnimation { phase = .error("Missing identity commitment") }
             return
         }
-        proximityManager.acceptGroupInvite(invite, to: fromPeer, memberName: name, memberCommitment: commitment)
+        // Defer actual send until connected by accepting the MP invite now
+        proximityManager.acceptPendingGroupInvite(memberName: name, memberCommitment: commitment)
         withAnimation { phase = .success }
         if autoDismissOnSuccess {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { dismiss() }

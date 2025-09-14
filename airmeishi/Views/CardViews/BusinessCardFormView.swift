@@ -95,11 +95,7 @@ struct BusinessCardFormView: View {
             } message: {
                 Text(alertMessage)
             }
-            .sheet(isPresented: $showingOCRScanner) {
-                OCRScannerView { extractedCard in
-                    applyExtractedData(extractedCard)
-                }
-            }
+            // OCR scanner removed per new flow
             .photosPicker(isPresented: $showingImagePicker, selection: $selectedPhotoItem, matching: .images)
             .onChange(of: selectedPhotoItem) { _, newItem in
                 loadSelectedImage(newItem)
@@ -169,12 +165,20 @@ struct BusinessCardFormView: View {
     private var basicInfoSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
+                // Show selected group read-only at top
+                if let gid = SemaphoreGroupManager.shared.selectedGroupId,
+                   let g = SemaphoreGroupManager.shared.allGroups.first(where: { $0.id == gid }) {
+                    HStack {
+                        Text("Group").foregroundColor(.secondary)
+                        Spacer()
+                        Text(g.name).font(.headline)
+                    }
+                }
                 TextField("Full Name", text: $businessCard.name)
                     .textContentType(.name)
                     .onChange(of: businessCard.name) { _, _ in
                         validateName()
                     }
-                
                 if let error = nameError {
                     Text(error)
                         .font(.caption)
@@ -182,17 +186,12 @@ struct BusinessCardFormView: View {
                 }
             }
             
+            // Re-enable Job Title input (even with group), but keep company hidden
             TextField("Job Title", text: Binding(
                 get: { businessCard.title ?? "" },
                 set: { businessCard.title = $0.isEmpty ? nil : $0 }
             ))
             .textContentType(.jobTitle)
-            
-            TextField("Company", text: Binding(
-                get: { businessCard.company ?? "" },
-                set: { businessCard.company = $0.isEmpty ? nil : $0 }
-            ))
-            .textContentType(.organizationName)
         } header: {
             Text("Basic Information")
         }
@@ -237,10 +236,7 @@ struct BusinessCardFormView: View {
                 }
             }
             
-            Button("Scan Business Card") {
-                showingOCRScanner = true
-            }
-            .foregroundColor(.blue)
+            // Scan business card removed per new flow
         } header: {
             Text("Contact Information (Sensitive Information)")
         }

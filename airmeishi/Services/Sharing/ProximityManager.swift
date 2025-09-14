@@ -35,6 +35,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
     @Published var pendingInvitation: PendingInvitation?
     @Published private(set) var isPresentingInvitation = false
     @Published var pendingGroupInvite: (payload: GroupInvitePayload, from: MCPeerID)?
+    private var pendingGroupJoinResponse: (invite: GroupInvitePayload, memberName: String, memberCommitment: String, peerID: MCPeerID)?
     
     // MARK: - Private Properties
     private let serviceType = "airmeishi-share"
@@ -97,6 +98,34 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         connectionStatus = .advertising
         
         print("Started advertising business card: \(card.name)")
+    }
+    
+    /// Start advertising identity-only (no business card), so peers can still find and invite
+    func startAdvertisingIdentity(displayName: String? = nil) {
+        guard !isAdvertising else { return }
+        
+        currentCard = nil
+        currentSharingLevel = .public
+        
+        var info: [String: String] = [:]
+        let name = displayName ?? UIDevice.current.name
+        info["name"] = name
+        info["level"] = SharingLevel.public.rawValue
+        info["idOnly"] = "1"
+        info["timestamp"] = String(Int(Date().timeIntervalSince1970))
+        
+        advertiser = MCNearbyServiceAdvertiser(
+            peer: localPeerID,
+            discoveryInfo: info,
+            serviceType: serviceType
+        )
+        advertiser?.delegate = self
+        advertiser?.startAdvertisingPeer()
+        
+        isAdvertising = true
+        updateConnectionStatus()
+        
+        print("Started advertising identity-only: \(name)")
     }
     
     /// Stop advertising
@@ -260,6 +289,21 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         pendingInvitation = nil
         pendingInvitationHandler = nil
         isPresentingInvitation = false
+    }
+
+    /// Accept the most recent pending group invite and defer sending the join response until connected
+    func acceptPendingGroupInvite(memberName: String, memberCommitment: String) {
+        guard let tuple = pendingGroupInvite else { return }
+        pendingGroupJoinResponse = (invite: tuple.payload, memberName: memberName, memberCommitment: memberCommitment, peerID: tuple.from)
+        // Accept the Multipeer invitation to establish the session
+        respondToPendingInvitation(accept: true)
+    }
+
+    /// Decline the most recent pending group invite
+    func declinePendingGroupInvite() {
+        respondToPendingInvitation(accept: false)
+        pendingGroupInvite = nil
+        pendingGroupJoinResponse = nil
     }
 
     /// Attempt to exclusively present the invitation popup. Returns true if acquired.
@@ -538,6 +582,13 @@ extension ProximityManager: MCSessionDelegate {
             if state == .connected, let card = self.currentCard {
                 self.sendCard(card, to: peerID, sharingLevel: self.currentSharingLevel)
             }
+
+            // If we have a pending join response for this peer, send it now
+            if state == .connected, let pending = self.pendingGroupJoinResponse, pending.peerID == peerID {
+                self.acceptGroupInvite(pending.invite, to: pending.peerID, memberName: pending.memberName, memberCommitment: pending.memberCommitment)
+                self.pendingGroupJoinResponse = nil
+                self.pendingGroupInvite = nil
+            }
         }
     }
     
@@ -546,6 +597,9 @@ extension ProximityManager: MCSessionDelegate {
         if let invite = try? JSONDecoder().decode(GroupInvitePayload.self, from: data) {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
+                // Ensure the group shows up immediately on the invited device
+                let gm = SemaphoreGroupManager.shared
+                gm.ensureGroupFromInvite(id: invite.groupId, name: invite.groupName, root: invite.groupRoot)
                 self.pendingGroupInvite = (invite, peerID)
                 NotificationCenter.default.post(
                     name: .groupInviteReceived,
@@ -571,6 +625,11 @@ extension ProximityManager: MCSessionDelegate {
                     name: .matchingReceivedCard,
                     object: nil,
                     userInfo: [ProximityEventKey.card: card]
+                )
+                NotificationCenter.default.post(
+                    name: .groupMembershipUpdated,
+                    object: nil,
+                    userInfo: [ProximityEventKey.groupId: join.groupId]
                 )
             }
             return

@@ -49,23 +49,6 @@ struct ProximitySharingView: View {
                 }
                 
         VStack(spacing: 12) {
-                    if cardManager.businessCards.isEmpty {
-                        VStack(spacing: 8) {
-                            Text("You need a card to start matching.")
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                            Button(action: { showCreateCard = true }) {
-                                Text("Create Card")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(Color.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            }
-                        }
-                    }
-                    
                     Button(action: toggleMatching) {
                         Text(isMatching ? "Stop Matching" : "Start Matching")
                 .font(.headline)
@@ -75,8 +58,6 @@ struct ProximitySharingView: View {
                             .background(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
-                .disabled(selectedCard == nil)
-                    .opacity(selectedCard == nil ? 0.6 : 1)
                     
                     Button(action: { showQRScanner = true }) {
                         HStack(spacing: 6) {
@@ -180,9 +161,11 @@ struct ProximitySharingView: View {
             return
         }
         
-        guard let card = selectedCard else { return }
-        
-        proximityManager.startAdvertising(with: card, sharingLevel: selectedSharingLevel)
+        if let card = selectedCard {
+            proximityManager.startAdvertising(with: card, sharingLevel: selectedSharingLevel)
+        } else {
+            proximityManager.startAdvertisingIdentity(displayName: UIDevice.current.name)
+        }
         proximityManager.startBrowsing()
         isMatching = true
     }
