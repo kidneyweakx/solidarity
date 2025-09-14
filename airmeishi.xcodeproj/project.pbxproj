@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */ = {isa = PBXBuildFile; productRef = F1134EA52E757F230097A2A4 /* Semaphore */; };
+		F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; productRef = F11566D92E75F0C000EEBA51 /* ReownAppKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +71,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */,
+				F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +141,7 @@
 			name = airmeishi;
 			packageProductDependencies = (
 				F1134EA52E757F230097A2A4 /* Semaphore */,
+				F11566D92E75F0C000EEBA51 /* ReownAppKit */,
 			);
 			productName = airmeishi;
 			productReference = F1133D7E2E70600A0097A2A4 /* airmeishi.app */;
@@ -224,6 +227,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */,
+				F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
@@ -645,6 +649,14 @@
 				kind = branch;
 			};
 		};
+		F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/reown-com/reown-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -652,6 +664,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */;
 			productName = Semaphore;
+		};
+		F11566D92E75F0C000EEBA51 /* ReownAppKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = ReownAppKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

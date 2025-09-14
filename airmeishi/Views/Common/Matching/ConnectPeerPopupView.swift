@@ -45,14 +45,14 @@ struct ConnectPeerPopupView: View {
             isAnimating = true
             updateDisplayedStatus()
         }
-        .onChange(of: proximityManager.nearbyPeers) { _ in
+        .onChange(of: proximityManager.nearbyPeers) { _, _ in
             handlePeerStatusChange()
         }
-        .onChange(of: proximityManager.connectionStatus) { _ in
+        .onChange(of: proximityManager.connectionStatus) { _, _ in
             handlePeerStatusChange()
         }
-        .onChange(of: proximityManager.lastError) { err in
-            if case let .some(.sharingError(message)) = err {
+        .onChange(of: proximityManager.lastError) { _, newValue in
+            if case let .some(.sharingError(message)) = newValue {
                 withAnimation { phase = .error(message) }
             }
         }

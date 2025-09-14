@@ -12,6 +12,7 @@ struct ZKIdentitySettingsView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
     private let groupsAPI = GroupsService()
+    @StateObject private var wallet = ReownWalletManager.shared
 
     @State private var identityCommitment: String = ""
     @State private var groupId: String = "engineering"
@@ -27,6 +28,7 @@ struct ZKIdentitySettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                walletHeader
                 sectionCard(title: "Identity", systemImage: "person.text.rectangle") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top) {
@@ -339,6 +341,113 @@ struct ZKIdentitySettingsView: View {
 
 #Preview {
     NavigationView { ZKIdentitySettingsView() }
+}
+
+// MARK: - Wallet Header
+
+extension ZKIdentitySettingsView {
+    private var walletHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 44, height: 44)
+                    Image(systemName: wallet.isConnected ? "checkmark.seal.fill" : "wallet.pass").foregroundColor(.accentColor)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(wallet.isConnected ? (wallet.displayName ?? "Wallet") : "Not Connected")
+                        .font(.headline)
+                    Text(wallet.accountAddress ?? "—")
+                        .font(.footnote.monospaced())
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+                Spacer()
+                if wallet.isConnected {
+                    Menu {
+                        Button("Disconnect", role: .destructive) { wallet.disconnect() }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            HStack(spacing: 10) {
+                if wallet.isConnected {
+                    Button { signSemaphoreData() } label: {
+                        HStack(spacing: 8) { Image(systemName: "signature"); Text("Sign Semaphore").fontWeight(.semibold) }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .buttonStyle(AccentGradientButtonStyle())
+                } else {
+                    Button { wallet.connect() } label: {
+                        HStack(spacing: 8) { Image(systemName: "link.badge.plus"); Text("Connect Wallet").fontWeight(.semibold) }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .buttonStyle(AccentGradientButtonStyle())
+                }
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color(uiColor: .secondarySystemBackground)))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.secondary.opacity(0.15)))
+    }
+    
+    private func signSemaphoreData() {
+        // Ensure commitment present
+        if identityCommitment.isEmpty, let id = idm.getIdentity() { identityCommitment = id.commitment }
+        guard !identityCommitment.isEmpty else {
+            errorMessage = "No identity commitment. Generate first."
+            showErrorAlert = true
+            return
+        }
+        let gid = groupId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let payload: [String: String] = [
+            "type": "semaphore-sign",
+            "commitment": identityCommitment,
+            "groupId": gid,
+            "merkleRoot": group.merkleRoot ?? "",
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
+           let toSign = String(data: data, encoding: .utf8),
+           let sig = wallet.signMessage(toSign) {
+            print("====== [WalletSign] Semaphore Signing Request ======")
+            print("Address: \(wallet.accountAddress ?? "-")")
+            print("DisplayName: \(wallet.displayName ?? "-")")
+            print("Commitment: \(identityCommitment)")
+            print("GroupId: \(gid)")
+            print("MerkleRoot: \(group.merkleRoot ?? "")")
+            print("Payload JSON: \(toSign)")
+            print("Signature (hex, \(sig.count) chars): \(sig)")
+            print("===================================================")
+            statusMessage = "Signed (semaphore): \(sig.prefix(10))…"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { statusMessage = nil }
+        } else {
+            errorMessage = "Failed to sign"
+            showErrorAlert = true
+        }
+    }
+}
+
+// MARK: - AccentGradientButtonStyle
+
+private struct AccentGradientButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(.white)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(colors: [Color.purple.opacity(0.95), Color.blue.opacity(0.9)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+            )
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2)))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+    }
 }
 
 
