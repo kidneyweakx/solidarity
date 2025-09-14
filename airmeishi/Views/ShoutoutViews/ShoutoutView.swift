@@ -39,9 +39,6 @@ struct ShoutoutView: View {
                     
                     // Business card gallery
                     cardGallery
-                    
-                    // Floating lightning action button
-                    lightningActionButton
                 }
             }
             .navigationTitle("Shoutout")
@@ -65,6 +62,12 @@ struct ShoutoutView: View {
             }
             .sheet(isPresented: $showingCreateShoutout) {
                 CreateShoutoutView(selectedUser: selectedUser)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                // Floating lightning action button
+                lightningActionButton
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 30)
             }
         }
         .preferredColorScheme(.dark)
@@ -175,46 +178,35 @@ struct ShoutoutView: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.bottom, 100) // Space for floating button
         }
     }
     
     // MARK: - Floating Lightning Action Button
     
     private var lightningActionButton: some View {
-        VStack {
-            Spacer()
-            
-            HStack {
-                Spacer()
+        Button(action: { showingCreateShoutout = true }) {
+            ZStack {
+                // Lightning bolt background
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.yellow, .orange, .red],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 60)
+                    .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
                 
-                Button(action: { showingCreateShoutout = true }) {
-                    ZStack {
-                        // Lightning bolt background
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.yellow, .orange, .red],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 60, height: 60)
-                            .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
-                        
-                        // Lightning icon
-                        Image(systemName: "bolt.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
-                            .animation(
-                                .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                                value: isLightningAnimating
-                            )
-                    }
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 30)
+                // Lightning icon
+                Image(systemName: "bolt.fill")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
+                        value: isLightningAnimating
+                    )
             }
         }
     }
