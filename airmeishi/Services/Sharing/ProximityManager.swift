@@ -34,6 +34,7 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
     @Published private(set) var lastReceivedVerification: VerificationStatus?
     @Published var pendingInvitation: PendingInvitation?
     @Published private(set) var isPresentingInvitation = false
+    @Published var pendingGroupInvite: (payload: GroupInvitePayload, from: MCPeerID)?
     
     // MARK: - Private Properties
     private let serviceType = "airmeishi-share"
@@ -198,6 +199,47 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
             print("Failed to send card: \(error)")
         }
     }
+
+    /// Send a group invite to a specific peer
+    func sendGroupInvite(to peer: MCPeerID, group: SemaphoreGroupManager.ManagedGroup, inviterName: String) {
+        guard session.connectedPeers.contains(peer) else {
+            lastError = .sharingError("Peer is not connected")
+            return
+        }
+        let payload = GroupInvitePayload(
+            groupId: group.id,
+            groupName: group.name,
+            groupRoot: group.root,
+            inviterName: inviterName,
+            timestamp: Date()
+        )
+        do {
+            let data = try JSONEncoder().encode(payload)
+            try session.send(data, toPeers: [peer], with: .reliable)
+            print("Sent group invite to \(peer.displayName) for group: \(group.name)")
+        } catch {
+            lastError = .sharingError("Failed to send group invite: \(error.localizedDescription)")
+            print("Failed to send group invite: \(error)")
+        }
+    }
+
+    /// Accept a pending group invite and send back join response with user's commitment
+    func acceptGroupInvite(_ invite: GroupInvitePayload, to peer: MCPeerID, memberName: String, memberCommitment: String) {
+        let response = GroupJoinResponsePayload(
+            groupId: invite.groupId,
+            memberCommitment: memberCommitment,
+            memberName: memberName,
+            timestamp: Date()
+        )
+        do {
+            let data = try JSONEncoder().encode(response)
+            try session.send(data, toPeers: [peer], with: .reliable)
+            print("Sent group join response to \(peer.displayName) for group: \(invite.groupName)")
+        } catch {
+            lastError = .sharingError("Failed to send join response: \(error.localizedDescription)")
+            print("Failed to send join response: \(error)")
+        }
+    }
     
     /// Disconnect from all peers and stop all services
     func disconnect() {
@@ -259,6 +301,28 @@ class ProximityManager: NSObject, ProximityManagerProtocol, ObservableObject {
         }
         
         print("Connecting to peer: \(peer.name)")
+    }
+
+    /// Invite a peer to join a group using the Multipeer invitation context (no manual connect first)
+    func invitePeerToGroup(_ peer: ProximityPeer, group: SemaphoreGroupManager.ManagedGroup, inviterName: String) {
+        guard let browser = browser else {
+            lastError = .sharingError("Browser not available")
+            return
+        }
+        let payload = GroupInvitePayload(
+            groupId: group.id,
+            groupName: group.name,
+            groupRoot: group.root,
+            inviterName: inviterName,
+            timestamp: Date()
+        )
+        do {
+            let context = try JSONEncoder().encode(payload)
+            browser.invitePeer(peer.peerID, to: session, withContext: context, timeout: 30)
+            print("Invited \(peer.name) to group via context: \(group.name)")
+        } catch {
+            lastError = .sharingError("Failed to encode invite: \(error.localizedDescription)")
+        }
     }
     
     /// Clear received cards
@@ -478,6 +542,39 @@ extension ProximityManager: MCSessionDelegate {
     }
     
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
+        // Try decoding in order: GroupInvite, GroupJoinResponse, BusinessCard share
+        if let invite = try? JSONDecoder().decode(GroupInvitePayload.self, from: data) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.pendingGroupInvite = (invite, peerID)
+                NotificationCenter.default.post(
+                    name: .groupInviteReceived,
+                    object: nil,
+                    userInfo: [ProximityEventKey.invite: invite, ProximityEventKey.peerID: peerID]
+                )
+            }
+            return
+        }
+        if let join = try? JSONDecoder().decode(GroupJoinResponsePayload.self, from: data) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                // Add member to the matching group if it exists locally
+                let gm = SemaphoreGroupManager.shared
+                if let idx = gm.allGroups.firstIndex(where: { $0.id == join.groupId }) {
+                    gm.selectGroup(gm.allGroups[idx].id)
+                    gm.addMember(join.memberCommitment)
+                }
+                // Create a simple card with the member's name and broadcast as received
+                let card = BusinessCard(name: join.memberName)
+                self.receivedCards.append(card)
+                NotificationCenter.default.post(
+                    name: .matchingReceivedCard,
+                    object: nil,
+                    userInfo: [ProximityEventKey.card: card]
+                )
+            }
+            return
+        }
         do {
             let payload = try JSONDecoder().decode(ProximitySharingPayload.self, from: data)
             let status = ProximityVerificationHelper.verify(
@@ -489,24 +586,20 @@ extension ProximityManager: MCSessionDelegate {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 self.lastReceivedVerification = status
-                // Update verification on matching peer in nearby list if found
                 if let index = self.nearbyPeers.firstIndex(where: { $0.peerID == peerID }) {
                     self.nearbyPeers[index].verification = status
                 }
                 self.handleReceivedCard(payload.card, from: payload.senderID, status: status)
-
-                // Broadcast received card
                 NotificationCenter.default.post(
                     name: .matchingReceivedCard,
                     object: nil,
                     userInfo: [ProximityEventKey.card: payload.card]
                 )
             }
-            
         } catch {
             print("Failed to decode received data: \(error)")
             DispatchQueue.main.async { [weak self] in
-                let err: CardError = .sharingError("Failed to decode received card")
+                let err: CardError = .sharingError("Failed to decode received data")
                 self?.lastError = err
                 NotificationCenter.default.post(
                     name: .matchingError,
@@ -534,7 +627,23 @@ extension ProximityManager: MCSessionDelegate {
 
 extension ProximityManager: MCNearbyServiceAdvertiserDelegate {
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        // Store and publish pending invitation for UI confirmation
+        // Decode group invite if present in context; otherwise treat as connection invite
+        if let ctx = context, let invite = try? JSONDecoder().decode(GroupInvitePayload.self, from: ctx) {
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.pendingInvitationHandler = invitationHandler
+                self.pendingGroupInvite = (invite, peerID)
+                self.isPresentingInvitation = false
+                NotificationCenter.default.post(
+                    name: .groupInviteReceived,
+                    object: nil,
+                    userInfo: [ProximityEventKey.invite: invite, ProximityEventKey.peerID: peerID]
+                )
+                print("Received group invite from \(peerID.displayName) for group: \(invite.groupName)")
+            }
+            return
+        }
+        // Store and publish pending connection invitation for UI confirmation
         Task { @MainActor [weak self] in
             guard let self = self else { return }
             self.pendingInvitationHandler = invitationHandler

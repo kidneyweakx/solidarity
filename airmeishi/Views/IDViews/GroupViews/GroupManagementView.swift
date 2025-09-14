@@ -7,9 +7,11 @@
 
 import SwiftUI
 import UIKit
+import MultipeerConnectivity
 
 struct GroupManagementView: View {
     @StateObject private var group = SemaphoreGroupManager.shared
+    @StateObject private var proximity = ProximityManager.shared
     @State private var newMemberCommitment: String = ""
     @State private var joinCode: String = ""
     @State private var ensName: String = ""
@@ -41,6 +43,9 @@ struct GroupManagementView: View {
         }
         .navigationTitle("Group Management")
         .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        .onReceive(NotificationCenter.default.publisher(for: .groupInviteReceived)) { _ in
+            // A separate global UI can present ConnectGroupInvitePopupView when needed
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .root:
@@ -193,6 +198,36 @@ struct GroupManagementView: View {
                         newMemberCommitment = ""
                     }
                     .disabled(newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                Section("Invite Nearby (AirDrop-like)") {
+                    if group.allGroups.isEmpty {
+                        Text("Create a group first").foregroundColor(.secondary)
+                    } else if let gid = group.selectedGroupId, let g = group.allGroups.first(where: { $0.id == gid }) {
+                        HStack {
+                            Text(g.name)
+                            Spacer()
+                            Text("Peers: \(proximity.nearbyPeers.count)").foregroundColor(.secondary)
+                        }
+                        if proximity.nearbyPeers.isEmpty {
+                            Text("No nearby peers. Open Matching to discover peers.").font(.caption).foregroundColor(.secondary)
+                        } else {
+                            ForEach(proximity.nearbyPeers) { peer in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(peer.cardName ?? peer.name).font(.subheadline)
+                                        if let title = peer.cardTitle { Text(title).font(.caption2).foregroundColor(.secondary) }
+                                    }
+                                    Spacer()
+                                    Button {
+                                        let inviter = BusinessCard.sample.name
+                                        proximity.sendGroupInvite(to: peer.peerID, group: g, inviterName: inviter)
+                                    } label: {
+                                        Image(systemName: "paperplane.fill")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Add User")

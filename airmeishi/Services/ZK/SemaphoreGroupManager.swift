@@ -138,6 +138,7 @@ final class SemaphoreGroupManager: ObservableObject {
         var root: String?
     }
 
+    @discardableResult
     func createGroup(name: String, initialMembers: [String] = []) -> ManagedGroup {
         let g = ManagedGroup(id: UUID(), name: name, createdAt: Date(), members: Array(Set(initialMembers)), root: nil)
         onMain { [weak self] in
@@ -148,6 +149,10 @@ final class SemaphoreGroupManager: ObservableObject {
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
         recomputeRoot()
+        // Auto-create a simple card with the group name for now
+        let cardName = name
+        let card = BusinessCard(name: cardName)
+        _ = CardManager.shared.createCard(card)
         return g
     }
 

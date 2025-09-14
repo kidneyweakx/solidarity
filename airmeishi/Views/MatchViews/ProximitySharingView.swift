@@ -135,6 +135,7 @@ struct ProximitySharingView: View {
             }
         }
         .overlay(incomingInvitationOverlay)
+        .overlay(incomingGroupInviteOverlay)
         .sheet(isPresented: $showQRScanner) {
             QRScannerView()
         }
@@ -210,6 +211,27 @@ struct ProximitySharingView: View {
                     }
                 )
                 .transition(.opacity)
+            }
+        }
+    }
+
+    private var incomingGroupInviteOverlay: some View {
+        Group {
+            if let tuple = proximityManager.pendingGroupInvite {
+                ConnectGroupInvitePopupView(
+                    invite: tuple.payload,
+                    fromPeer: tuple.from,
+                    isPresented: Binding<Bool>(
+                        get: { true },
+                        set: { newVal in if newVal == false { proximityManager.pendingGroupInvite = nil } }
+                    ),
+                    autoDismissOnSuccess: true,
+                    onDismiss: {
+                        proximityManager.pendingGroupInvite = nil
+                        proximityManager.releaseInvitationPresentation()
+                    }
+                )
+                .transition(AnyTransition.opacity)
             }
         }
     }

@@ -19,3 +19,21 @@ struct ProximitySharingPayload: Codable {
 }
 
 
+/// Payload for inviting a nearby peer to join a Semaphore group
+struct GroupInvitePayload: Codable {
+    let groupId: UUID
+    let groupName: String
+    let groupRoot: String?
+    let inviterName: String
+    let timestamp: Date
+}
+
+/// Payload for responding to a group invite with the recipient's commitment
+struct GroupJoinResponsePayload: Codable {
+    let groupId: UUID
+    let memberCommitment: String
+    let memberName: String
+    let timestamp: Date
+}
+
+
