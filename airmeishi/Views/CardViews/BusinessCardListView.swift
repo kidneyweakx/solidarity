@@ -24,6 +24,8 @@ struct BusinessCardListView: View {
     @State private var alertMessage: String?
     @State private var draggedCard: BusinessCard?
     @State private var dragOffset: CGSize = .zero
+    @State private var deckOrder: [UUID] = []
+    @State private var rotationAngles: [UUID: Double] = [:]
     
     var body: some View {
         NavigationView {
@@ -35,25 +37,7 @@ struct BusinessCardListView: View {
                 } else if cardManager.businessCards.isEmpty {
                     EmptyWalletView(onCreate: { featuredCard = nil; showingCreateCard = true }, onScan: { showingOCRScanner = true })
                 } else {
-                    WalletStackListView(cards: cardManager.businessCards,
-                                        onEdit: { card in beginEdit(card) },
-                                        onAddToWallet: { card in addToWallet(card) },
-                                        onFocus: { card in
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                            featuredCard = card
-                            isFeatured = true
-                        }
-                    },
-                                        onDrag: { card, offset in
-                        draggedCard = card
-                        dragOffset = offset
-                    },
-                                        onDragEnd: { card in
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            draggedCard = nil
-                            dragOffset = .zero
-                        }
-                    })
+                    makeStack()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -95,16 +79,87 @@ struct BusinessCardListView: View {
         }
         .overlay(alignment: .top) { sharingBannerTop }
         .overlay { focusedOverlay }
+        .onAppear { initializeDeckOrder() }
+        .onChange(of: cardManager.businessCards) { _, _ in synchronizeDeckWithData() }
     }
 }
 
 // MARK: - Sharing Helpers
 
 private extension BusinessCardListView {
+    @ViewBuilder
+    func makeStack() -> some View {
+        WalletStackListView(
+            cards: orderedCards,
+            onEdit: beginEdit,
+            onAddToWallet: addToWallet,
+            onFocus: handleFocus,
+            onDrag: handleDragChange,
+            onDragEnd: handleDragEnd,
+            onLongPress: shuffleDeck,
+            rotationFor: rotationFor
+        )
+    }
+    var orderedCards: [BusinessCard] {
+        let idToCard: [UUID: BusinessCard] = Dictionary(uniqueKeysWithValues: cardManager.businessCards.map { ($0.id, $0) })
+        var result: [BusinessCard] = []
+        for id in deckOrder {
+            if let c = idToCard[id] { result.append(c) }
+        }
+        // Append any new cards not tracked yet
+        let remaining = cardManager.businessCards.filter { !deckOrder.contains($0.id) }
+        result.append(contentsOf: remaining)
+        return result
+    }
+
+    func initializeDeckOrder() {
+        deckOrder = cardManager.businessCards.map { $0.id }
+    }
+
+    func synchronizeDeckWithData() {
+        // Keep deck order stable; append new ids at the end, remove missing ones
+        let currentIds = Set(cardManager.businessCards.map { $0.id })
+        deckOrder = deckOrder.filter { currentIds.contains($0) }
+        for id in cardManager.businessCards.map({ $0.id }) where !deckOrder.contains(id) {
+            deckOrder.append(id)
+        }
+    }
+
+    func shuffleDeck() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+            deckOrder.shuffle()
+            var angles: [UUID: Double] = [:]
+            for id in deckOrder { angles[id] = Double(Int.random(in: -8...8)) }
+            rotationAngles = angles
+        }
+    }
     func startSharing(_ card: BusinessCard) {
         proximityManager.stopAdvertising()
         proximityManager.startAdvertising(with: card, sharingLevel: .professional)
     }
+    func handleFocus(_ card: BusinessCard) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+            featuredCard = card
+            isFeatured = true
+        }
+    }
+
+    func handleDragChange(_ card: BusinessCard, _ offset: CGSize) {
+        draggedCard = card
+        dragOffset = offset
+    }
+
+    func handleDragEnd(_ card: BusinessCard) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            draggedCard = nil
+            dragOffset = .zero
+        }
+    }
+
+    func rotationFor(_ id: UUID) -> Double { rotationAngles[id] ?? 0 }
+
 
     func beginEdit(_ card: BusinessCard) {
         featuredCard = card
@@ -194,9 +249,11 @@ private struct WalletStackListView: View {
     let onFocus: (BusinessCard) -> Void
     let onDrag: (BusinessCard, CGSize) -> Void
     let onDragEnd: (BusinessCard) -> Void
+    let onLongPress: () -> Void
+    let rotationFor: (UUID) -> Double
     
     private let cardHeight: CGFloat = 220
-    private let overlap: CGFloat = 72
+    private let overlap: CGFloat = 64
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -207,7 +264,10 @@ private struct WalletStackListView: View {
                     WalletCardView(card: card, onEdit: { onEdit(card) }, onAddToWallet: { onAddToWallet(card) })
                         .frame(height: cardHeight)
                         .offset(y: CGFloat(index) * overlap)
-                        .zIndex(Double(cards.count - index))
+                        .rotationEffect(.degrees(rotationFor(card.id)))
+                        .offset(x: CGFloat(rotationFor(card.id)) * 1.2)
+                        .scaleEffect(1 - CGFloat(min(index, 4)) * 0.02)
+                        .zIndex(Double(index))
                         .onTapGesture { onFocus(card) }
                         .gesture(
                             DragGesture()
@@ -220,9 +280,11 @@ private struct WalletStackListView: View {
                         )
                         .padding(.horizontal, 16)
                         .padding(.top, index == 0 ? 16 : -overlap)
+                        .padding(.bottom, -overlap)
                 }
             }
-            .padding(.bottom, 40)
+            .gesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in onLongPress() })
+            .padding(.bottom, CGFloat(max(0, cards.count - 1)) * overlap + 160)
         }
         .scrollDisabled(false)
     }
@@ -246,15 +308,40 @@ private struct WalletCardView: View {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(theme.cardAccent.opacity(0.35), lineWidth: 1)
                 )
+                // Gloss highlight for premium look
+                .overlay(alignment: .topLeading) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.45), Color.white.opacity(0.12), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .opacity(0.65)
+                }
                 .overlay {
-                    HStack(spacing: 12) {
+                    HStack(alignment: .center, spacing: 14) {
+                        if let animal = card.animal {
+                            ImageProvider.animalImage(for: animal)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 84, height: 84)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                )
+                                .padding(.leading, 18)
+                        } else {
+                            Spacer().frame(width: 18)
+                        }
                         VStack(alignment: .leading, spacing: 6) {
                             Text(card.name)
-                                .font(.title2.weight(.bold))
+                                .font(.headline.weight(.semibold))
                                 .foregroundColor(.black)
-                            if let company = card.company { Text(company).foregroundColor(.black.opacity(0.75)) }
-                            if let title = card.title { Text(title).font(.subheadline).foregroundColor(.black.opacity(0.65)) }
-                            Spacer()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            if let company = card.company { Text(company).font(.subheadline).foregroundColor(.black.opacity(0.75)) }
+                            if let title = card.title { Text(title).font(.footnote).foregroundColor(.black.opacity(0.65)) }
                             HStack(spacing: 6) {
                                 ForEach(card.skills.prefix(3)) { skill in
                                     Text(skill.name)
@@ -266,18 +353,9 @@ private struct WalletCardView: View {
                                 }
                             }
                         }
-                        .padding(16)
-                        Spacer()
-                        if let animal = card.animal {
-                            ImageProvider.animalImage(for: animal)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 96, height: 96)
-                                .opacity(0.95)
-                                .padding(.trailing, 14)
-                                .padding(.top, 8)
-                        }
+                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isFlipped)
@@ -335,15 +413,15 @@ private struct WalletCardView: View {
             let colors: [Color]
             switch animal {
             case .dog:
-                colors = [Color(hex: 0xFFF8E1), Color(hex: 0xFFD54F).opacity(0.35)]
+                colors = [Color(hex: 0xFFF8E1), Color(hex: 0xFFD54F)]
             case .horse:
-                colors = [Color(hex: 0xE8EAF6), Color(hex: 0x5C6BC0).opacity(0.35)]
+                colors = [Color(hex: 0xE8EAF6), Color(hex: 0x5C6BC0)]
             case .pig:
-                colors = [Color(hex: 0xFCE4EC), Color(hex: 0xF06292).opacity(0.35)]
+                colors = [Color(hex: 0xFCE4EC), Color(hex: 0xF06292)]
             case .sheep:
-                colors = [Color(hex: 0xE8F5E9), Color(hex: 0x66BB6A).opacity(0.35)]
+                colors = [Color(hex: 0xE8F5E9), Color(hex: 0x66BB6A)]
             case .dove:
-                colors = [Color(hex: 0xE0F7FA), Color(hex: 0x26C6DA).opacity(0.35)]
+                colors = [Color(hex: 0xE0F7FA), Color(hex: 0x26C6DA)]
             }
             return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
         }
@@ -352,7 +430,7 @@ private struct WalletCardView: View {
         let hue = Double(abs(hash % 360)) / 360.0
         let base = Color(hue: hue, saturation: 0.55, brightness: 0.95)
         let light = Color.white
-        return LinearGradient(colors: [light, base.opacity(0.22)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        return LinearGradient(colors: [light, base], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 

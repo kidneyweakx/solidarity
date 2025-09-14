@@ -34,7 +34,11 @@ private struct AnimalChip: View {
                 .scaledToFill()
                 .frame(width: 36, height: 24)
                 .clipped()
-                .cornerRadius(6)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(isSelected ? 0.6 : 0.25), lineWidth: 1)
+                )
             Text(animal.displayName)
                 .font(.caption.weight(.semibold))
         }
