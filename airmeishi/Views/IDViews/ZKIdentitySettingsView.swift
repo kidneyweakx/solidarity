@@ -14,10 +14,9 @@ import Web3Auth
 struct ZKIdentitySettingsView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
-    private let groupsAPI = GroupsService()
     @StateObject private var web3Auth = Web3AuthManager.shared
     @State private var web3RPC: Web3RPC?
-    private let ensService = ENSService()
+    
 
     @State private var identityCommitment: String = ""
     @State private var groupId: String = "engineering"
@@ -35,8 +34,6 @@ struct ZKIdentitySettingsView: View {
     // ENS Signing states
     @State private var ensDomain: String = ""
     @State private var ensSignature: String = ""
-    @State private var ensResolvedAddress: String = ""
-    @State private var isResolvingENS: Bool = false
     @State private var isSigningENS: Bool = false
 
     var body: some View {
@@ -80,7 +77,7 @@ struct ZKIdentitySettingsView: View {
                     }
                 }
 
-                sectionCard(title: "Group", systemImage: "person.3") {
+                sectionCard(title: "Group (Local Demo)", systemImage: "person.3") {
                     VStack(alignment: .leading, spacing: 12) {
                         TextField("Group ID", text: $groupId)
                             .textInputAutocapitalization(.never)
@@ -122,9 +119,8 @@ struct ZKIdentitySettingsView: View {
                             } label: { Label("Recompute", systemImage: "arrow.clockwise") }
                             .buttonStyle(.bordered)
 
-                            Button { syncRootFromAPI() } label: { Label("Sync Root (API)", systemImage: "icloud.and.arrow.down") }
-                                .buttonStyle(.bordered)
-                                .disabled(isWorking || groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            // Old API removed; keep local recompute only
+                            EmptyView()
                         }
 
                         if !group.members.isEmpty {
@@ -168,20 +164,6 @@ struct ZKIdentitySettingsView: View {
                         
                         HStack(spacing: 10) {
                             Button {
-                                resolveENS()
-                            } label: {
-                                HStack {
-                                    if isResolvingENS {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                    }
-                                    Label("Resolve", systemImage: "magnifyingglass")
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isResolvingENS)
-                            
-                            Button {
                                 signENS()
                             } label: {
                                 HStack {
@@ -194,20 +176,6 @@ struct ZKIdentitySettingsView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSigningENS || !web3Auth.isLoggedIn)
-                        }
-                        
-                        if !ensResolvedAddress.isEmpty {
-                            HStack(alignment: .top) {
-                                Text("Resolved Address:")
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(ensResolvedAddress)
-                                    .font(.footnote.monospaced())
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.trailing)
-                                    .textSelection(.enabled)
-                            }
                         }
                         
                         if !ensSignature.isEmpty {
@@ -263,7 +231,9 @@ struct ZKIdentitySettingsView: View {
         .navigationTitle("ZK Identity")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
-        .onAppear { refresh() }
+        .onAppear {
+            refresh()
+        }
         .alert("Error", isPresented: $showErrorAlert) { Button("OK", role: .cancel) {} } message: { Text(errorMessage ?? "Unknown error") }
         .hideKeyboardAccessory()
     }
@@ -292,94 +262,25 @@ struct ZKIdentitySettingsView: View {
 
     // MARK: - API actions
 
-    private func syncRootFromAPI() {
-        let gid = groupId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !gid.isEmpty else { return }
-        isWorking = true
-        Task {
-            let result = await groupsAPI.getRoot(groupId: gid)
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let resp):
-                    group.setMembers(group.members) // keep current; update root only
-                    group.updateRoot(resp.zkRoot)
-                    statusMessage = "Synced root"
-                case .failure(let err):
-                    errorMessage = err.localizedDescription
-                    showErrorAlert = true
-                }
-                isWorking = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
-            }
-        }
-    }
+    // Old API sync removed
 
     private func addSelfViaAPI() {
+        // Old API removed; keep local add only
         if identityCommitment.isEmpty, let id = idm.getIdentity() { identityCommitment = id.commitment }
         guard !identityCommitment.isEmpty else { return }
-        let gid = groupId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !gid.isEmpty else { return }
-        isWorking = true
         let commitment = identityCommitment
-        let signaturePayload = "add|\(gid)|\(commitment)"
-        guard let sigHex = signString(signaturePayload) else {
-            errorMessage = "Failed to sign request"
-            showErrorAlert = true
-            isWorking = false
-            return
-        }
-        let payload = AddMemberRequest(commitment: commitment, signature: sigHex)
-        Task {
-            let result = await groupsAPI.addMember(groupId: gid, payload: payload)
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let resp):
-                    if !group.members.contains(commitment) { group.addMember(commitment) }
-                    group.updateRoot(resp.newRoot)
-                    statusMessage = "Uploaded membership"
-                case .failure(let err):
-                    errorMessage = err.localizedDescription
-                    showErrorAlert = true
-                }
-                isWorking = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
-            }
-        }
+        if !group.members.contains(commitment) { group.addMember(commitment) }
+        statusMessage = "Added locally"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
     }
 
     private func revokeSelfViaAPI() {
+        // Old API removed; keep local revoke only
         if identityCommitment.isEmpty, let id = idm.getIdentity() { identityCommitment = id.commitment }
-        guard let idx = group.indexOf(identityCommitment) else { return }
-        let gid = groupId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !gid.isEmpty else { return }
-        isWorking = true
-        // Derive a stable nullifier for this app context: hash(privateKey || groupId)
-        guard let bundle = idm.getIdentity() else { isWorking = false; return }
-        let nullifierHex = sha256Hex(bundle.privateKey + Data(gid.utf8))
-        let signaturePayload = "revoke|\(gid)|\(idx)|\(nullifierHex)"
-        guard let sigHex = signString(signaturePayload) else {
-            errorMessage = "Failed to sign request"
-            showErrorAlert = true
-            isWorking = false
-            return
-        }
-        let payload = RevokeMemberRequest(memberIndex: idx, nullifier: nullifierHex, signature: sigHex)
-        Task {
-            let result = await groupsAPI.revokeMember(groupId: gid, payload: payload)
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let resp):
-                    group.removeMember(identityCommitment)
-                    group.updateRoot(resp.newRoot)
-                    statusMessage = "Revoked"
-                case .failure(let err):
-                    errorMessage = err.localizedDescription
-                    showErrorAlert = true
-                }
-                isWorking = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
-            }
-        }
+        guard group.indexOf(identityCommitment) != nil else { return }
+        group.removeMember(identityCommitment)
+        statusMessage = "Revoked locally"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
     }
 
     // MARK: - Helpers (local)
@@ -408,29 +309,7 @@ struct ZKIdentitySettingsView: View {
     
     // MARK: - ENS Functions
     
-    private func resolveENS() {
-        guard !ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isResolvingENS = true
-        Task {
-            let result = await ensService.resolve(name: ensDomain)
-            DispatchQueue.main.async {
-                self.isResolvingENS = false
-                switch result {
-                case .success(let response):
-                    self.ensResolvedAddress = response.address ?? ""
-                    if !self.ensResolvedAddress.isEmpty {
-                        self.statusMessage = "ENS resolved successfully"
-                    } else {
-                        self.statusMessage = "ENS not found"
-                    }
-                case .failure(let error):
-                    self.ensResolvedAddress = ""
-                    self.statusMessage = "ENS resolution failed: \(error.localizedDescription)"
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.statusMessage = nil }
-            }
-        }
-    }
+    // ENS resolution via API removed
     
     private func signENS() {
         guard !ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -519,98 +398,42 @@ struct ZKIdentitySettingsView: View {
 extension ZKIdentitySettingsView {
     private var web3AuthHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle().fill(Color.blue.opacity(0.15)).frame(width: 44, height: 44)
-                    Image(systemName: web3Auth.isLoggedIn ? "checkmark.seal.fill" : "person.crop.circle").foregroundColor(.blue)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(web3Auth.isLoggedIn ? (web3Auth.displayName ?? "Web3Auth") : "Not Connected")
-                        .font(.headline)
-                    Text(web3Auth.address ?? "—")
-                        .font(.footnote.monospaced())
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                }
-                Spacer()
-                if web3Auth.isLoggedIn {
-                    Menu {
-                        Button("Logout", role: .destructive) { web3Auth.logout() }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            
+            Text("Wallet Login")
+                .font(.headline)
+
             if web3Auth.isLoading {
                 HStack {
-                    ProgressView()
-                        .controlSize(.small)
+                    ProgressView().controlSize(.small)
                     Text("Loading...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            } else if web3Auth.isLoggedIn {
-                if let user = web3Auth.user {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if let name = user.userInfo?.name {
-                            Text("Name: \(name)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        if let email = user.userInfo?.email {
-                            Text("Email: \(email)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+            }
+
+            if web3Auth.isLoggedIn {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Signed in")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    if let addr = web3Auth.address {
+                        Text(addr)
+                            .font(.footnote.monospaced())
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                     }
+                    Button("Logout", role: .destructive) { web3Auth.logout() }
+                        .buttonStyle(.bordered)
                 }
             } else {
-                VStack(spacing: 8) {
-                    HStack(spacing: 10) {
-                        Button { web3Auth.login() } label: {
-                            HStack(spacing: 8) { 
-                                Image(systemName: "person.crop.circle.badge.checkmark")
-                                Text("Google Login").fontWeight(.semibold) 
-                            }
-                        }
-                        .buttonStyle(AccentGradientButtonStyle())
-                        
-                        Button { showEmailLogin.toggle() } label: {
-                            HStack(spacing: 8) { 
-                                Image(systemName: "envelope")
-                                Text("Email Login").fontWeight(.semibold) 
-                            }
-                        }
-                        .buttonStyle(AccentGradientButtonStyle())
-                    }
-                    
-                    if showEmailLogin {
-                        VStack(spacing: 8) {
-                            TextField("Enter your email", text: $emailInput)
-                                .textFieldStyle(.roundedBorder)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                            
-                            Button { 
-                                web3Auth.loginWithEmail(emailInput)
-                                showEmailLogin = false
-                            } label: {
-                                Text("Login with Email")
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                            }
-                            .disabled(emailInput.isEmpty)
-                        }
-                        .padding(.top, 8)
+                Button { web3Auth.login() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "apple.logo")
+                        Text("Sign In with Apple").fontWeight(.semibold)
                     }
                 }
+                .buttonStyle(AccentGradientButtonStyle())
+                .disabled(web3Auth.isLoading)
             }
         }
         .padding(14)

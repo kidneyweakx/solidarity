@@ -461,6 +461,12 @@ private struct CreateGroupSheet: View {
     @State private var includeSelf = true
     @ObservedObject private var idm = SemaphoreIdentityManager.shared
     @ObservedObject private var manager = SemaphoreGroupManager.shared
+    @State private var isCreating = false
+    @State private var localErrorMessage: String?
+    @State private var showLocalErrorAlert = false
+    @State private var creationOwnerAddress: String = ""
+    @State private var showSpinner: Bool = false
+    @State private var spinnerProgress: Double = 0
 
     var body: some View {
         Form {
@@ -470,19 +476,98 @@ private struct CreateGroupSheet: View {
                 Toggle("Include my identity", isOn: $includeSelf)
             }
             Section {
-                Button("Create") { create() }
-                    .disabled(groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if showSpinner {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProgressView(value: spinnerProgress, total: 90)
+                            .progressViewStyle(.linear)
+                        Text("Provisioning... ~90s")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Button(isCreating ? "Creating... (long press)" : "Create (tap = local, long press = API)") {}
+                    .onTapGesture { localCreate() }
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.5)
+                            .onEnded { _ in create() }
+                    )
+                    .disabled(isCreating || groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .navigationTitle("Create Group (ENS enabled)")
         .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Cancel") { dismiss() } } }
+        .alert("Error", isPresented: $showLocalErrorAlert) { Button("OK", role: .cancel) {} } message: { Text(localErrorMessage ?? "Unknown error") }
     }
     // tree root
     private func create() {
+        if isCreating { return }
+        isCreating = true
+        let name = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
         var members: [String] = []
         if includeSelf, let bundle = idm.getIdentity() ?? (try? idm.loadOrCreateIdentity()) { members.append(bundle.commitment) }
-        manager.createGroup(name: groupName.trimmingCharacters(in: .whitespacesAndNewlines), initialMembers: members)
+        let owner = randomEthAddress()
+        creationOwnerAddress = owner
+        let payload = CreateGroupRequest(
+            name: name,
+            members: members.isEmpty ? nil : members,
+            ownerAddress: owner,
+            skipEns: nil
+        )
+        Task {
+            startSpinnerCountdown()
+            let service = GroupsService()
+            let result = await service.createGroup(payload)
+            switch result {
+            case .success(let resp):
+                // Mirror server state locally
+                let created = manager.createGroup(name: resp.name, initialMembers: resp.members, ownerAddress: owner)
+                manager.updateRoot(resp.tree_root)
+                DispatchQueue.main.async { _ = created; isCreating = false; showSpinner = false; spinnerProgress = 0; dismiss() }
+            case .failure(let err):
+                DispatchQueue.main.async {
+                    isCreating = false
+                    showSpinner = false
+                    spinnerProgress = 0
+                    localErrorMessage = err.localizedDescription
+                    showLocalErrorAlert = true
+                }
+            }
+        }
+    }
+
+    private func localCreate() {
+        if isCreating { return }
+        let name = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        var members: [String] = []
+        if includeSelf, let bundle = idm.getIdentity() ?? (try? idm.loadOrCreateIdentity()) { members.append(bundle.commitment) }
+        let owner = randomEthAddress()
+        _ = manager.createGroup(name: name, initialMembers: members, ownerAddress: owner)
         dismiss()
+    }
+
+    private func randomEthAddress() -> String {
+        var bytes = [UInt8](repeating: 0, count: 20)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let hex = bytes.map { String(format: "%02x", $0) }.joined()
+        return "0x" + hex
+    }
+
+    private func startSpinnerCountdown() {
+        showSpinner = true
+        spinnerProgress = 0
+        // Approximately 90 seconds; tick every second
+        var elapsed = 0
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            if !isCreating {
+                timer.invalidate()
+                return
+            }
+            elapsed += 1
+            spinnerProgress = Double(elapsed)
+            if elapsed >= 90 {
+                timer.invalidate()
+            }
+        }
     }
 }
 

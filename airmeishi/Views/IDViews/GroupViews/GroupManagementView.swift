@@ -13,6 +13,9 @@ struct GroupManagementView: View {
     @StateObject private var group = SemaphoreGroupManager.shared
     @StateObject private var proximity = ProximityManager.shared
     @State private var newMemberCommitment: String = ""
+    @State private var isAddingMember: Bool = false
+    @State private var addMemberErrorMessage: String? = nil
+    @State private var showAddMemberError: Bool = false
     @State private var joinCode: String = ""
     @State private var ensName: String = ""
     @State private var ensResolvedAddress: String? = nil
@@ -62,39 +65,23 @@ struct GroupManagementView: View {
                 InviteSheet
             }
         }
+        .alert("Add Member Failed", isPresented: $showAddMemberError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(addMemberErrorMessage ?? "Unknown error")
+        }
     }
 
     // MARK: - Helpers
 
     private func resolveENS() {
-        guard !ensName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isResolvingENS = true
-        Task {
-            let res = await ENSService().resolve(name: ensName)
-            DispatchQueue.main.async {
-                self.isResolvingENS = false
-                switch res {
-                case .success(let payload):
-                    self.ensResolvedAddress = payload.address
-                case .failure:
-                    self.ensResolvedAddress = nil
-                }
-            }
-        }
+        // Old ENS service removed; no-op in this build
+        ensResolvedAddress = nil
     }
 
     private func fetchRootViaENS() {
-        guard !ensName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isFetchingRoot = true
-        Task {
-            let res = await GroupsService().getRoot(groupId: ensName)
-            DispatchQueue.main.async {
-                self.isFetchingRoot = false
-                if case .success(let payload) = res {
-                    self.group.updateRoot(payload.zkRoot)
-                }
-            }
-        }
+        // Old API removed; rely on local root or other sync
+        isFetchingRoot = false
     }
 
     private func copyRoot() {
@@ -118,6 +105,39 @@ struct GroupManagementView: View {
         let result = QRCodeManager.shared.generateQRCode(from: url)
         if case .success(let image) = result { self.joinQRImage = image }
     }
+
+    private func addMemberAction() {
+        let commitment = newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !commitment.isEmpty else { return }
+        guard let gid = group.selectedGroupId, let current = group.allGroups.first(where: { $0.id == gid }) else { return }
+        isAddingMember = true
+        // Use group owner's address created during group creation; fallback to empty string if unavailable
+        let owner = current.ownerAddress ?? ""
+        let payload = AddGroupMemberRequest(userId: commitment, ownerAddress: owner)
+        Task {
+            let service = GroupsService()
+            let result = await service.addMember(groupName: current.name, payload: payload)
+            switch result {
+            case .success(let resp):
+                // Update local state to mirror server
+                group.setMembers(resp.members)
+                group.updateRoot(resp.tree_root)
+                DispatchQueue.main.async {
+                    isAddingMember = false
+                    newMemberCommitment = ""
+                }
+            case .failure:
+                // Ignore API error: still add locally
+                DispatchQueue.main.async {
+                    group.addMember(commitment)
+                    isAddingMember = false
+                    newMemberCommitment = ""
+                }
+            }
+        }
+    }
+
+    // No randomEthAddress here; add member must reuse owner's address from creation
 
     // MARK: - Sheets
 
@@ -209,13 +229,8 @@ struct GroupManagementView: View {
                     TextField("Commitment", text: $newMemberCommitment)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    Button("Add to Group") {
-                        let c = newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !c.isEmpty else { return }
-                        group.addMember(c)
-                        newMemberCommitment = ""
-                    }
-                    .disabled(newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button(isAddingMember ? "Adding..." : "Add to Group") { addMemberAction() }
+                        .disabled(isAddingMember || newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 Section("Invite Nearby (AirDrop-like)") {
                     if group.allGroups.isEmpty {

@@ -16,6 +16,7 @@ final class Web3AuthManager: ObservableObject {
 	@Published private(set) var user: Web3AuthState? = nil
 	@Published private(set) var lastError: CardError?
 	@Published private(set) var isLoading: Bool = false
+	private var loginInFlight: Bool = false
 	
 	private var web3Auth: Web3Auth?
 	private let clientId = "BIrqtSxWou0y6Unpm_cFXcCSgqLXUldpnioD685xpd1ABC7cTDmOb6f_qA3MoM1naMeA-IWptPJ0wcNmgWzkCug"
@@ -72,13 +73,17 @@ final class Web3AuthManager: ObservableObject {
 		}
 		
 		Task {
-			await MainActor.run {
-				isLoading = true
+			let canStart: Bool = await MainActor.run { () -> Bool in
+				if self.isLoading || self.loginInFlight || self.isLoggedIn { return false }
+				self.isLoading = true
+				self.loginInFlight = true
+				return true
 			}
+			guard canStart else { return }
 			
 			do {
 				let result = try await web3Auth.login(
-					W3ALoginParams(loginProvider: .GOOGLE)
+					W3ALoginParams(loginProvider: .APPLE)
 				)
 				
 				await MainActor.run {
@@ -86,11 +91,13 @@ final class Web3AuthManager: ObservableObject {
 					isLoggedIn = true
 					updateUserInfo()
 					isLoading = false
+					loginInFlight = false
 				}
 			} catch {
 				await MainActor.run {
 					lastError = .networkError("Login failed: \(error.localizedDescription)")
 					isLoading = false
+					loginInFlight = false
 				}
 			}
 		}
@@ -107,9 +114,13 @@ final class Web3AuthManager: ObservableObject {
 		}
 		
 		Task {
-			await MainActor.run {
-				isLoading = true
+			let canStart: Bool = await MainActor.run { () -> Bool in
+				if self.isLoading || self.loginInFlight || self.isLoggedIn { return false }
+				self.isLoading = true
+				self.loginInFlight = true
+				return true
 			}
+			guard canStart else { return }
 			
 			do {
 				let result = try await web3Auth.login(
@@ -126,11 +137,13 @@ final class Web3AuthManager: ObservableObject {
 					isLoggedIn = true
 					updateUserInfo()
 					isLoading = false
+					loginInFlight = false
 				}
 			} catch {
 				await MainActor.run {
 					lastError = .networkError("Email login failed: \(error.localizedDescription)")
 					isLoading = false
+					loginInFlight = false
 				}
 			}
 		}

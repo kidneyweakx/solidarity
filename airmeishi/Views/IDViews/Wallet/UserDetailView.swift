@@ -5,7 +5,7 @@ struct UserDetailView: View {
     @State private var isPrivateKeySectionVisible = false
     @State private var showingAlert = false
     @StateObject var web3RPC: Web3RPC
-    @StateObject var viewModel: ViewModel
+    @StateObject var viewModel: WalletViewModel
 
     var body: some View {
         if let user = viewModel.user {
@@ -70,17 +70,7 @@ struct UserDetailView: View {
 
                 Section {
                     Button {
-                        Task.detached {
-                            do {
-                              
-                                try await viewModel.logout()
-                               
-                            } catch {
-                                DispatchQueue.main.async {
-                                    showingAlert = true
-                                }
-                            }
-                        }
+                        viewModel.logout()
                     } label: {
                         Label("Logout", systemImage: "arrow.left.square.fill")
                             .foregroundColor(.red)

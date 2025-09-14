@@ -120,11 +120,12 @@ final class SemaphoreGroupManager: ObservableObject {
         var createdAt: Date
         var members: [String]
         var root: String?
+        var ownerAddress: String?
     }
 
     @discardableResult
-    func createGroup(name: String, initialMembers: [String] = []) -> ManagedGroup {
-        let g = ManagedGroup(id: UUID(), name: name, createdAt: Date(), members: Array(Set(initialMembers)), root: nil)
+    func createGroup(name: String, initialMembers: [String] = [], ownerAddress: String? = nil) -> ManagedGroup {
+        let g = ManagedGroup(id: UUID(), name: name, createdAt: Date(), members: Array(Set(initialMembers)), root: nil, ownerAddress: ownerAddress)
         onMain { [weak self] in
             guard let self = self else { return }
             self.allGroups.append(g)

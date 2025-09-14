@@ -12,7 +12,7 @@ struct APIConfig {
     /// Default API base URL
     static var baseURL: URL {
         // Keep in sync with server deployment
-        return URL(string: "http://localhost:8787")!
+        return URL(string: "https://luftdeck.sololin.xyz/")!
     }
     
     /// Request timeout interval
