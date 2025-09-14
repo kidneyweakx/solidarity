@@ -31,6 +31,11 @@ class QRCodeManager: NSObject, ObservableObject {
     
     // MARK: - QR Code Generation
     
+    /// Public helper: generate a QR code image for arbitrary string content
+    func generateQRCode(from string: String) -> CardResult<UIImage> {
+        return generateQRCodeImage(from: string)
+    }
+
     /// Generate QR code for business card with selective field disclosure
     func generateQRCode(
         for businessCard: BusinessCard,

@@ -27,6 +27,7 @@ struct IDView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
     @State private var showingSettings = false
+    @State private var showingCreateGroup = false
     @State private var identityCommitment: String = ""
     @State private var proofStatus: String?
     @State private var ringActiveCount: Int = 0
@@ -82,6 +83,9 @@ struct IDView: View {
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { ZKIdentitySettingsView() }
+        }
+        .sheet(isPresented: $showingCreateGroup) {
+            NavigationStack { CreateGroupSheet() }
         }
         .alert("Error", isPresented: $showErrorAlert) {
             Button("OK", role: .cancel) {}
@@ -254,12 +258,9 @@ struct IDView: View {
             do {
                 let bundle = try idm.loadOrCreateIdentity()
                 DispatchQueue.main.async { identityCommitment = bundle.commitment }
-                group.setMembers([bundle.commitment])
-                print("[Semaphore] Group initialized with 1 member (self). Commitment: \(bundle.commitment)")
                 DispatchQueue.main.async {
-                    proofStatus = "Group created"
                     isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
+                    showingCreateGroup = true
                 }
             } catch {
                 ZKLog.error("Error on longPressAction: \(error.localizedDescription)")
@@ -450,6 +451,39 @@ struct IDView: View {
 
 #Preview {
     IDView()
+}
+
+// MARK: - Create Group Sheet
+// @TODO: this need to call api to create group 
+private struct CreateGroupSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var groupName: String = ""
+    @State private var includeSelf = true
+    @ObservedObject private var idm = SemaphoreIdentityManager.shared
+    @ObservedObject private var manager = SemaphoreGroupManager.shared
+
+    var body: some View {
+        Form {
+            Section("New Group") {
+                TextField("Group name", text: $groupName)
+                    .textInputAutocapitalization(.words)
+                Toggle("Include my identity", isOn: $includeSelf)
+            }
+            Section {
+                Button("Create") { create() }
+                    .disabled(groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .navigationTitle("Create Group (ENS enabled)")
+        .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+    }
+    // tree root
+    private func create() {
+        var members: [String] = []
+        if includeSelf, let bundle = idm.getIdentity() ?? (try? idm.loadOrCreateIdentity()) { members.append(bundle.commitment) }
+        manager.createGroup(name: groupName.trimmingCharacters(in: .whitespacesAndNewlines), initialMembers: members)
+        dismiss()
+    }
 }
 
 // MARK: - ZK stylized badge

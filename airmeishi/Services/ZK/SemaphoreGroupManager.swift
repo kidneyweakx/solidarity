@@ -17,8 +17,13 @@ final class SemaphoreGroupManager: ObservableObject {
     static let shared = SemaphoreGroupManager()
     private init() { load() }
 
-    @Published private(set) var members: [String] = []   // identity commitments (public)
-    @Published private(set) var merkleRoot: String?      // latest root
+    // Public-facing: state of the currently selected group
+    @Published private(set) var members: [String] = []
+    @Published private(set) var merkleRoot: String?
+
+    // Multi-group state
+    @Published private(set) var allGroups: [ManagedGroup] = []
+    @Published private(set) var selectedGroupId: UUID?
 
     private let storage = GroupStorage()
 
@@ -31,19 +36,26 @@ final class SemaphoreGroupManager: ObservableObject {
 
     func load() {
         let state = storage.load()
-        members = state.members
-        merkleRoot = state.root
+        self.allGroups = state.groups
+        self.selectedGroupId = state.selectedGroupId ?? state.groups.first?.id
+        applySelectedToPublished()
     }
 
-    func save() { storage.save(members: members, root: merkleRoot) }
+    func save() { storage.save(groups: allGroups, selectedGroupId: selectedGroupId) }
 
     // MARK: - Membership
 
     func setMembers(_ commitments: [String]) {
         onMain { [weak self] in
             guard let self = self else { return }
-            self.members = Array(Set(commitments))
-            self.recomputeRoot()
+            guard let gid = self.selectedGroupId, let idx = self.allGroups.firstIndex(where: { $0.id == gid }) else {
+                self.members = Array(Set(commitments))
+                self.recomputeRoot()
+                return
+            }
+            self.allGroups[idx].members = Array(Set(commitments))
+            self.updateRootForGroup(at: idx)
+            self.applySelectedToPublished()
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
@@ -51,9 +63,11 @@ final class SemaphoreGroupManager: ObservableObject {
     func addMember(_ commitment: String) {
         onMain { [weak self] in
             guard let self = self else { return }
-            guard !self.members.contains(commitment) else { return }
-            self.members.append(commitment)
-            self.recomputeRoot()
+            guard let gid = self.selectedGroupId, let idx = self.allGroups.firstIndex(where: { $0.id == gid }) else { return }
+            guard !self.allGroups[idx].members.contains(commitment) else { return }
+            self.allGroups[idx].members.append(commitment)
+            self.updateRootForGroup(at: idx)
+            self.applySelectedToPublished()
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
@@ -61,8 +75,10 @@ final class SemaphoreGroupManager: ObservableObject {
     func removeMember(_ commitment: String) {
         onMain { [weak self] in
             guard let self = self else { return }
-            self.members.removeAll { $0 == commitment }
-            self.recomputeRoot()
+            guard let gid = self.selectedGroupId, let idx = self.allGroups.firstIndex(where: { $0.id == gid }) else { return }
+            self.allGroups[idx].members.removeAll { $0 == commitment }
+            self.updateRootForGroup(at: idx)
+            self.applySelectedToPublished()
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
     }
@@ -73,8 +89,10 @@ final class SemaphoreGroupManager: ObservableObject {
 
     func recomputeRoot() {
         #if canImport(Semaphore)
-        // Build a minimal group using our local identity only to avoid relying on Element initializers.
-        // TODO: Convert stored commitment strings to proper elements once supported by the bindings.
+        guard let gid = selectedGroupId, let idx = allGroups.firstIndex(where: { $0.id == gid }) else {
+            onMain { [weak self] in self?.merkleRoot = nil }
+            return
+        }
         var newRoot: String? = nil
         if let bundle = SemaphoreIdentityManager.shared.getIdentity() {
             let identity = Identity(privateKey: bundle.privateKey)
@@ -83,18 +101,85 @@ final class SemaphoreGroupManager: ObservableObject {
                 newRoot = rootData.map { String(format: "%02x", $0) }.joined()
             }
         }
-        onMain { [weak self] in self?.merkleRoot = newRoot }
+        onMain { [weak self] in
+            guard let self = self else { return }
+            self.allGroups[idx].root = newRoot
+            self.merkleRoot = newRoot
+        }
         #else
-        // Fallback: simple hash of members for display only
-        let newRoot = String(members.joined(separator: ":").hashValue)
-        onMain { [weak self] in self?.merkleRoot = newRoot }
+        guard let gid = selectedGroupId, let idx = allGroups.firstIndex(where: { $0.id == gid }) else { return }
+        let newRoot = String(allGroups[idx].members.joined(separator: ":").hashValue)
+        onMain { [weak self] in
+            self?.allGroups[idx].root = newRoot
+            self?.merkleRoot = newRoot
+        }
         #endif
     }
 
     /// Update the current Merkle root from an external source (API/chain)
     func updateRoot(_ newRoot: String?) {
-        onMain { [weak self] in self?.merkleRoot = newRoot }
+        onMain { [weak self] in
+            guard let self = self else { return }
+            if let gid = self.selectedGroupId, let idx = self.allGroups.firstIndex(where: { $0.id == gid }) {
+                self.allGroups[idx].root = newRoot
+            }
+            self.merkleRoot = newRoot
+        }
         DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+    }
+
+    // MARK: - Multi-group management
+
+    struct ManagedGroup: Codable, Identifiable, Equatable {
+        let id: UUID
+        var name: String
+        var createdAt: Date
+        var members: [String]
+        var root: String?
+    }
+
+    func createGroup(name: String, initialMembers: [String] = []) -> ManagedGroup {
+        let g = ManagedGroup(id: UUID(), name: name, createdAt: Date(), members: Array(Set(initialMembers)), root: nil)
+        onMain { [weak self] in
+            guard let self = self else { return }
+            self.allGroups.append(g)
+            self.selectedGroupId = g.id
+            self.applySelectedToPublished()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+        recomputeRoot()
+        return g
+    }
+
+    func selectGroup(_ id: UUID) {
+        onMain { [weak self] in
+            self?.selectedGroupId = id
+            self?.applySelectedToPublished()
+        }
+    }
+
+    private func updateRootForGroup(at index: Int) {
+        #if canImport(Semaphore)
+        var newRoot: String? = nil
+        if let bundle = SemaphoreIdentityManager.shared.getIdentity() {
+            let identity = Identity(privateKey: bundle.privateKey)
+            let group = Group(members: [identity.toElement()])
+            if let rootData = group.root() { newRoot = rootData.map { String(format: "%02x", $0) }.joined() }
+        }
+        self.allGroups[index].root = newRoot
+        #else
+        self.allGroups[index].root = String(self.allGroups[index].members.joined(separator: ":").hashValue)
+        #endif
+    }
+
+    private func applySelectedToPublished() {
+        if let gid = selectedGroupId, let g = allGroups.first(where: { $0.id == gid }) {
+            self.members = g.members
+            self.merkleRoot = g.root
+        } else {
+            self.members = []
+            self.merkleRoot = nil
+        }
     }
 
     // MARK: - Sync (Placeholders)
@@ -132,15 +217,25 @@ private final class GroupStorage {
         url = appDir.appendingPathComponent("semaphore_group.json")
     }
 
-    struct State: Codable { let members: [String]; let root: String? }
+    struct StoredGroup: Codable { let id: UUID; var name: String; var createdAt: Date; var members: [String]; var root: String? }
+    struct State: Codable { let groups: [SemaphoreGroupManager.ManagedGroup]; let selectedGroupId: UUID? }
 
     func load() -> State {
-        guard let data = try? Data(contentsOf: url) else { return State(members: [], root: nil) }
-        return (try? JSONDecoder().decode(State.self, from: data)) ?? State(members: [], root: nil)
+        // Try new format
+        if let data = try? Data(contentsOf: url), let decoded = try? JSONDecoder().decode(State.self, from: data) {
+            return decoded
+        }
+        // Migrate from old single-group format if present
+        struct LegacyState: Codable { let members: [String]; let root: String? }
+        if let data = try? Data(contentsOf: url), let legacy = try? JSONDecoder().decode(LegacyState.self, from: data) {
+            let g = SemaphoreGroupManager.ManagedGroup(id: UUID(), name: "Default", createdAt: Date(), members: legacy.members, root: legacy.root)
+            return State(groups: [g], selectedGroupId: g.id)
+        }
+        return State(groups: [], selectedGroupId: nil)
     }
 
-    func save(members: [String], root: String?) {
-        let state = State(members: members, root: root)
+    func save(groups: [SemaphoreGroupManager.ManagedGroup], selectedGroupId: UUID?) {
+        let state = State(groups: groups, selectedGroupId: selectedGroupId)
         if let data = try? JSONEncoder().encode(state) { try? data.write(to: url) }
     }
 }
