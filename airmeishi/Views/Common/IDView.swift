@@ -475,7 +475,7 @@ private struct CreateGroupSheet: View {
             }
         }
         .navigationTitle("Create Group (ENS enabled)")
-        .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+        .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Cancel") { dismiss() } } }
     }
     // tree root
     private func create() {

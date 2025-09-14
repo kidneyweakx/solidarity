@@ -61,6 +61,7 @@ struct BusinessCardFormView: View {
     var body: some View {
         NavigationView {
             Form {
+                groupBannerSection
                 basicInfoSection
                 contactInfoSection
                 animalSection
@@ -165,15 +166,6 @@ struct BusinessCardFormView: View {
     private var basicInfoSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
-                // Show selected group read-only at top
-                if let gid = SemaphoreGroupManager.shared.selectedGroupId,
-                   let g = SemaphoreGroupManager.shared.allGroups.first(where: { $0.id == gid }) {
-                    HStack {
-                        Text("Group").foregroundColor(.secondary)
-                        Spacer()
-                        Text(g.name).font(.headline)
-                    }
-                }
                 TextField("Full Name", text: $businessCard.name)
                     .textContentType(.name)
                     .onChange(of: businessCard.name) { _, _ in
@@ -274,6 +266,14 @@ struct BusinessCardFormView: View {
     private func saveBusinessCard() {
         isLoading = true
         
+        // Ensure the card has an issuing group tag. Only set on create or if missing.
+        if businessCard.categories.first(where: { $0.hasPrefix("group:") }) == nil,
+           let gid = SemaphoreGroupManager.shared.selectedGroupId {
+            let tag = "group:\(gid.uuidString)"
+            businessCard.categories.removeAll { $0.hasPrefix("group:") }
+            businessCard.categories.append(tag)
+        }
+
         let result = isEditing ? 
             cardManager.updateCard(businessCard) : 
             cardManager.createCard(businessCard)
@@ -390,6 +390,46 @@ struct BusinessCardFormView: View {
         validateName()
         validateEmail()
         validatePhone()
+    }
+
+    // MARK: - Helpers
+    private func groupForCurrentCard() -> SemaphoreGroupManager.ManagedGroup? {
+        if let tag = businessCard.categories.first(where: { $0.hasPrefix("group:") }) {
+            let uuidString = String(tag.dropFirst("group:".count))
+            if let id = UUID(uuidString: uuidString) {
+                return SemaphoreGroupManager.shared.allGroups.first(where: { $0.id == id })
+            }
+        }
+        return nil
+    }
+
+    // Banner section shown only when the card has an issuing group
+    private var groupBannerSection: some View {
+        Group {
+            if let g = groupForCurrentCard() {
+                Section {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "person.3.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(g.name)
+                                .font(.headline)
+                            Text("Issuing Group")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
     }
 }
 
