@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */ = {isa = PBXBuildFile; productRef = F1134EA52E757F230097A2A4 /* Semaphore */; };
 		F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; productRef = F11566D92E75F0C000EEBA51 /* ReownAppKit */; };
+		F11569682E76E66A00EEBA51 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = F11569672E76E66A00EEBA51 /* WalletConnect */; };
+		F115696C2E76E7B100EEBA51 /* CryptoSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F115696B2E76E7B100EEBA51 /* CryptoSwift */; };
+		F115696E2E76E7BF00EEBA51 /* Web3 in Frameworks */ = {isa = PBXBuildFile; productRef = F115696D2E76E7BF00EEBA51 /* Web3 */; };
+		F11569702E76EA4A00EEBA51 /* WalletConnectNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,7 +75,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */,
+				F115696C2E76E7B100EEBA51 /* CryptoSwift in Frameworks */,
+				F11569702E76EA4A00EEBA51 /* WalletConnectNetworking in Frameworks */,
 				F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */,
+				F11569682E76E66A00EEBA51 /* WalletConnect in Frameworks */,
+				F115696E2E76E7BF00EEBA51 /* Web3 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +150,10 @@
 			packageProductDependencies = (
 				F1134EA52E757F230097A2A4 /* Semaphore */,
 				F11566D92E75F0C000EEBA51 /* ReownAppKit */,
+				F11569672E76E66A00EEBA51 /* WalletConnect */,
+				F115696B2E76E7B100EEBA51 /* CryptoSwift */,
+				F115696D2E76E7BF00EEBA51 /* Web3 */,
+				F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */,
 			);
 			productName = airmeishi;
 			productReference = F1133D7E2E70600A0097A2A4 /* airmeishi.app */;
@@ -228,6 +240,8 @@
 			packageReferences = (
 				F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */,
 				F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */,
+				F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */,
+				F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
@@ -433,6 +447,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = airmeishi/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Lust Deck";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes and business cards.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to contacts to save business card information.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs access to the local network to discover and connect with nearby devices for business card sharing.";
@@ -478,6 +494,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = airmeishi/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Lust Deck";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes and business cards.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to contacts to save business card information.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs access to the local network to discover and connect with nearby devices for business card sharing.";
@@ -657,6 +675,22 @@
 				minimumVersion = 1.7.3;
 			};
 		};
+		F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Boilertalk/Web3.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.8.8;
+			};
+		};
+		F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/krzyzanowskim/CryptoSwift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.9.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -669,6 +703,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
 			productName = ReownAppKit;
+		};
+		F11569672E76E66A00EEBA51 /* WalletConnect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = WalletConnect;
+		};
+		F115696B2E76E7B100EEBA51 /* CryptoSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */;
+			productName = CryptoSwift;
+		};
+		F115696D2E76E7BF00EEBA51 /* Web3 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */;
+			productName = Web3;
+		};
+		F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = WalletConnectNetworking;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
