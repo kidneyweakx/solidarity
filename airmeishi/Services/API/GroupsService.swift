@@ -14,41 +14,23 @@ class GroupsService {
         self.client = client
     }
     
-    /// POST /groups/groups/create
-    func createGroup(_ payload: GroupCreateRequest) async -> CardResult<GroupCreateResponse> {
+    /// POST /group
+    func createGroup(_ payload: CreateGroupRequest) async -> CardResult<CreateGroupResponse> {
         return await client.request(
-            path: "groups/groups/create",
+            path: "group",
             method: .POST,
             body: payload,
-            decodeAs: GroupCreateResponse.self
+            decodeAs: CreateGroupResponse.self
         )
     }
     
-    /// GET /groups/groups/{groupId}/root
-    func getRoot(groupId: String) async -> CardResult<GroupRootResponse> {
+    /// POST /group/{name}/member
+    func addMember(groupName: String, payload: AddGroupMemberRequest) async -> CardResult<AddGroupMemberResponse> {
         return await client.request(
-            path: "groups/groups/\(groupId)/root",
-            decodeAs: GroupRootResponse.self
-        )
-    }
-    
-    /// POST /groups/groups/{groupId}/add-member
-    func addMember(groupId: String, payload: AddMemberRequest) async -> CardResult<AddMemberResponse> {
-        return await client.request(
-            path: "groups/groups/\(groupId)/add-member",
+            path: "group/\(groupName)/member",
             method: .POST,
             body: payload,
-            decodeAs: AddMemberResponse.self
-        )
-    }
-    
-    /// POST /groups/groups/{groupId}/revoke
-    func revokeMember(groupId: String, payload: RevokeMemberRequest) async -> CardResult<RevokeMemberResponse> {
-        return await client.request(
-            path: "groups/groups/\(groupId)/revoke",
-            method: .POST,
-            body: payload,
-            decodeAs: RevokeMemberResponse.self
+            decodeAs: AddGroupMemberResponse.self
         )
     }
 }

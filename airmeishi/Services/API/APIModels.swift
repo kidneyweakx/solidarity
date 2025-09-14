@@ -32,43 +32,41 @@ struct ENSResponse: Codable {
     let name: String?
 }
 
-// MARK: - Groups
+// MARK: - Groups (only two endpoints: /group and /group/{name}/member)
 
-struct GroupCreateRequest: Codable {
+struct CreateGroupRequest: Codable {
     let name: String
-    let ensName: String?
-    let ensSignature: String?
+    let members: [String]?
+    let ownerAddress: String?
+    let skipEns: Bool?
 }
 
-struct GroupCreateResponse: Codable {
-    let groupId: String
-    let zkRoot: String
+struct CreateGroupResponse: Codable {
+    let name: String
+    let members: [String]
+    let tree_root: String
+    let member_count: Int
+    let ens_domain: String?
+    let ens_owner_address: String?
+    let ens_registration_tx: String?
+    let ens_transfer_tx: String?
+    let ens_status: String?
+    let ens_error: String?
+    let created_at: String?
 }
 
-struct GroupRootResponse: Codable {
-    let zkRoot: String
-    let blockNumber: Int
+struct AddGroupMemberRequest: Codable {
+    let userId: String
+    let ownerAddress: String
 }
 
-struct AddMemberRequest: Codable {
-    let commitment: String
-    let signature: String
-}
-
-struct AddMemberResponse: Codable {
-    let newRoot: String
-    let index: Int
-}
-
-struct RevokeMemberRequest: Codable {
-    let memberIndex: Int
-    let nullifier: String
-    let signature: String
-}
-
-struct RevokeMemberResponse: Codable {
-    let newRoot: String
-    let revokedAt: String
+struct AddGroupMemberResponse: Codable {
+    let name: String
+    let members: [String]
+    let tree_root: String
+    let member_count: Int
+    let added_member: String
+    let updated_at: String
 }
 
 // MARK: - Shoutouts
