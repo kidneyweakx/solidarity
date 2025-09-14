@@ -62,7 +62,7 @@ struct MainTabView: View {
         .onReceive(deepLinkManager.$pendingAction) { action in
             handleDeepLinkAction(action)
         }
-        .onChange(of: selectedTab) { newTab in
+        .onChange(of: selectedTab) { _, newTab in
             if newTab == 1 {
                 showingProximityFullscreen = true
                 selectedTab = 0 // Reset to first tab

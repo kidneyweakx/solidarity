@@ -7,12 +7,17 @@
 
 import SwiftUI
 import CryptoKit
+import BigInt
+import Web3
+import Web3Auth
 
 struct ZKIdentitySettingsView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
     private let groupsAPI = GroupsService()
-    @StateObject private var wallet = ReownWalletManager.shared
+    @StateObject private var web3Auth = Web3AuthManager.shared
+    @State private var web3RPC: Web3RPC?
+    private let ensService = ENSService()
 
     @State private var identityCommitment: String = ""
     @State private var groupId: String = "engineering"
@@ -24,11 +29,20 @@ struct ZKIdentitySettingsView: View {
     @State private var statusMessage: String?
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String?
+    @State private var emailInput: String = ""
+    @State private var showEmailLogin: Bool = false
+    
+    // ENS Signing states
+    @State private var ensDomain: String = ""
+    @State private var ensSignature: String = ""
+    @State private var ensResolvedAddress: String = ""
+    @State private var isResolvingENS: Bool = false
+    @State private var isSigningENS: Bool = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                walletHeader
+                web3AuthHeader
                 sectionCard(title: "Identity", systemImage: "person.text.rectangle") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top) {
@@ -141,6 +155,90 @@ struct ZKIdentitySettingsView: View {
                         if let proof = generatedProof {
                             ScrollView { Text(proof).font(.footnote).textSelection(.enabled) }
                                 .frame(minHeight: 100)
+                        }
+                    }
+                }
+
+                sectionCard(title: "ENS Signing", systemImage: "globe") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        TextField("ENS Domain (e.g., mygroup.eth)", text: $ensDomain)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                        
+                        HStack(spacing: 10) {
+                            Button {
+                                resolveENS()
+                            } label: {
+                                HStack {
+                                    if isResolvingENS {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    }
+                                    Label("Resolve", systemImage: "magnifyingglass")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isResolvingENS)
+                            
+                            Button {
+                                signENS()
+                            } label: {
+                                HStack {
+                                    if isSigningENS {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    }
+                                    Label("Sign", systemImage: "pencil.and.outline")
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSigningENS || !web3Auth.isLoggedIn)
+                        }
+                        
+                        if !ensResolvedAddress.isEmpty {
+                            HStack(alignment: .top) {
+                                Text("Resolved Address:")
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(ensResolvedAddress)
+                                    .font(.footnote.monospaced())
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.trailing)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        
+                        if !ensSignature.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("ENS Signature:")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Button {
+                                        #if canImport(UIKit)
+                                        UIPasteboard.general.string = ensSignature
+                                        #endif
+                                        statusMessage = "Signature copied"
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
+                                    } label: {
+                                        Label("Copy", systemImage: "doc.on.doc")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                                
+                                ScrollView {
+                                    Text(ensSignature)
+                                        .font(.footnote.monospaced())
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(minHeight: 60)
+                                .padding(8)
+                                .background(Color(uiColor: .tertiarySystemBackground))
+                                .cornerRadius(8)
+                            }
                         }
                     }
                 }
@@ -307,6 +405,79 @@ struct ZKIdentitySettingsView: View {
             return nil
         }
     }
+    
+    // MARK: - ENS Functions
+    
+    private func resolveENS() {
+        guard !ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isResolvingENS = true
+        Task {
+            let result = await ensService.resolve(name: ensDomain)
+            DispatchQueue.main.async {
+                self.isResolvingENS = false
+                switch result {
+                case .success(let response):
+                    self.ensResolvedAddress = response.address ?? ""
+                    if !self.ensResolvedAddress.isEmpty {
+                        self.statusMessage = "ENS resolved successfully"
+                    } else {
+                        self.statusMessage = "ENS not found"
+                    }
+                case .failure(let error):
+                    self.ensResolvedAddress = ""
+                    self.statusMessage = "ENS resolution failed: \(error.localizedDescription)"
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.statusMessage = nil }
+            }
+        }
+    }
+    
+    private func signENS() {
+        guard !ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard web3Auth.isLoggedIn, let user = web3Auth.user else {
+            errorMessage = "Please login with Web3Auth first"
+            showErrorAlert = true
+            return
+        }
+        
+        isSigningENS = true
+        
+        // Initialize Web3RPC if not already done
+        if web3RPC == nil {
+            web3RPC = Web3RPC(user: user)
+        }
+        
+        guard let rpc = web3RPC else {
+            isSigningENS = false
+            errorMessage = "Failed to initialize Web3RPC"
+            showErrorAlert = true
+            return
+        }
+        
+        Task {
+            do {
+                // Create a message to sign that includes the ENS domain and current timestamp
+                let timestamp = Int(Date().timeIntervalSince1970)
+                let messageToSign = "I am the owner of \(ensDomain) at \(timestamp)"
+                
+                // Sign the message using Web3RPC
+                let signature = try rpc.signMessage(message: messageToSign)
+                
+                DispatchQueue.main.async {
+                    self.ensSignature = signature
+                    self.isSigningENS = false
+                    self.statusMessage = "ENS domain signed successfully"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.statusMessage = nil }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isSigningENS = false
+                    self.errorMessage = "Failed to sign ENS domain: \(error.localizedDescription)"
+                    self.showErrorAlert = true
+                }
+            }
+        }
+    }
 
     private struct MembersList: View {
         let members: [String]
@@ -343,29 +514,29 @@ struct ZKIdentitySettingsView: View {
     NavigationView { ZKIdentitySettingsView() }
 }
 
-// MARK: - Wallet Header
+// MARK: - Web3Auth Header
 
 extension ZKIdentitySettingsView {
-    private var walletHeader: some View {
+    private var web3AuthHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 44, height: 44)
-                    Image(systemName: wallet.isConnected ? "checkmark.seal.fill" : "wallet.pass").foregroundColor(.accentColor)
+                    Circle().fill(Color.blue.opacity(0.15)).frame(width: 44, height: 44)
+                    Image(systemName: web3Auth.isLoggedIn ? "checkmark.seal.fill" : "person.crop.circle").foregroundColor(.blue)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(wallet.isConnected ? (wallet.displayName ?? "Wallet") : "Not Connected")
+                    Text(web3Auth.isLoggedIn ? (web3Auth.displayName ?? "Web3Auth") : "Not Connected")
                         .font(.headline)
-                    Text(wallet.accountAddress ?? "—")
+                    Text(web3Auth.address ?? "—")
                         .font(.footnote.monospaced())
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 }
                 Spacer()
-                if wallet.isConnected {
+                if web3Auth.isLoggedIn {
                     Menu {
-                        Button("Disconnect", role: .destructive) { wallet.disconnect() }
+                        Button("Logout", role: .destructive) { web3Auth.logout() }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .font(.title3)
@@ -373,61 +544,78 @@ extension ZKIdentitySettingsView {
                     }
                 }
             }
-            HStack(spacing: 10) {
-                if wallet.isConnected {
-                    Button { signSemaphoreData() } label: {
-                        HStack(spacing: 8) { Image(systemName: "signature"); Text("Sign Semaphore").fontWeight(.semibold) }
+            
+            if web3Auth.isLoading {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            } else if web3Auth.isLoggedIn {
+                if let user = web3Auth.user {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let name = user.userInfo?.name {
+                            Text("Name: \(name)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        if let email = user.userInfo?.email {
+                            Text("Email: \(email)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .buttonStyle(AccentGradientButtonStyle())
-                } else {
-                    Button { wallet.connect() } label: {
-                        HStack(spacing: 8) { Image(systemName: "link.badge.plus"); Text("Connect Wallet").fontWeight(.semibold) }
+                }
+            } else {
+                VStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        Button { web3Auth.login() } label: {
+                            HStack(spacing: 8) { 
+                                Image(systemName: "person.crop.circle.badge.checkmark")
+                                Text("Google Login").fontWeight(.semibold) 
+                            }
+                        }
+                        .buttonStyle(AccentGradientButtonStyle())
+                        
+                        Button { showEmailLogin.toggle() } label: {
+                            HStack(spacing: 8) { 
+                                Image(systemName: "envelope")
+                                Text("Email Login").fontWeight(.semibold) 
+                            }
+                        }
+                        .buttonStyle(AccentGradientButtonStyle())
                     }
-                    .frame(maxWidth: .infinity)
-                    .buttonStyle(AccentGradientButtonStyle())
+                    
+                    if showEmailLogin {
+                        VStack(spacing: 8) {
+                            TextField("Enter your email", text: $emailInput)
+                                .textFieldStyle(.roundedBorder)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            
+                            Button { 
+                                web3Auth.loginWithEmail(emailInput)
+                                showEmailLogin = false
+                            } label: {
+                                Text("Login with Email")
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
+                            }
+                            .disabled(emailInput.isEmpty)
+                        }
+                        .padding(.top, 8)
+                    }
                 }
             }
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color(uiColor: .secondarySystemBackground)))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.secondary.opacity(0.15)))
-    }
-    
-    private func signSemaphoreData() {
-        // Ensure commitment present
-        if identityCommitment.isEmpty, let id = idm.getIdentity() { identityCommitment = id.commitment }
-        guard !identityCommitment.isEmpty else {
-            errorMessage = "No identity commitment. Generate first."
-            showErrorAlert = true
-            return
-        }
-        let gid = groupId.trimmingCharacters(in: .whitespacesAndNewlines)
-        let payload: [String: String] = [
-            "type": "semaphore-sign",
-            "commitment": identityCommitment,
-            "groupId": gid,
-            "merkleRoot": group.merkleRoot ?? "",
-            "timestamp": ISO8601DateFormatter().string(from: Date())
-        ]
-        if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
-           let toSign = String(data: data, encoding: .utf8),
-           let sig = wallet.signMessage(toSign) {
-            print("====== [WalletSign] Semaphore Signing Request ======")
-            print("Address: \(wallet.accountAddress ?? "-")")
-            print("DisplayName: \(wallet.displayName ?? "-")")
-            print("Commitment: \(identityCommitment)")
-            print("GroupId: \(gid)")
-            print("MerkleRoot: \(group.merkleRoot ?? "")")
-            print("Payload JSON: \(toSign)")
-            print("Signature (hex, \(sig.count) chars): \(sig)")
-            print("===================================================")
-            statusMessage = "Signed (semaphore): \(sig.prefix(10))…"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { statusMessage = nil }
-        } else {
-            errorMessage = "Failed to sign"
-            showErrorAlert = true
-        }
     }
 }
 

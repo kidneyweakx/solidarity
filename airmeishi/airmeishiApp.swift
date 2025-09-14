@@ -16,6 +16,7 @@ struct airmeishiApp: App {
     @StateObject private var proximityManager = ProximityManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var web3auth = Web3AuthManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -66,7 +67,7 @@ struct airmeishiApp: App {
     private func handleIncomingURL(_ url: URL) {
         print("App received URL: \(url)")
         
-        let handled = deepLinkManager.handleIncomingURL(url)
+        let handled = deepLinkManager.handleIncomingURL(url) || web3auth.handleURL(url)
         
         if !handled {
             print("Failed to handle URL: \(url)")

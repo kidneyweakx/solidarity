@@ -8,11 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */ = {isa = PBXBuildFile; productRef = F1134EA52E757F230097A2A4 /* Semaphore */; };
-		F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; productRef = F11566D92E75F0C000EEBA51 /* ReownAppKit */; };
-		F11569682E76E66A00EEBA51 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = F11569672E76E66A00EEBA51 /* WalletConnect */; };
-		F115696C2E76E7B100EEBA51 /* CryptoSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F115696B2E76E7B100EEBA51 /* CryptoSwift */; };
-		F115696E2E76E7BF00EEBA51 /* Web3 in Frameworks */ = {isa = PBXBuildFile; productRef = F115696D2E76E7BF00EEBA51 /* Web3 */; };
-		F11569702E76EA4A00EEBA51 /* WalletConnectNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */; };
+		F11569772E76F73D00EEBA51 /* Web3Auth in Frameworks */ = {isa = PBXBuildFile; productRef = F11569762E76F73D00EEBA51 /* Web3Auth */; };
+		F1156CBA2E76FD7F00EEBA51 /* Web3 in Frameworks */ = {isa = PBXBuildFile; productRef = F11569792E76F74100EEBA51 /* Web3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,12 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1156CBA2E76FD7F00EEBA51 /* Web3 in Frameworks */,
 				F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */,
-				F115696C2E76E7B100EEBA51 /* CryptoSwift in Frameworks */,
-				F11569702E76EA4A00EEBA51 /* WalletConnectNetworking in Frameworks */,
-				F11566DA2E75F0C000EEBA51 /* ReownAppKit in Frameworks */,
-				F11569682E76E66A00EEBA51 /* WalletConnect in Frameworks */,
-				F115696E2E76E7BF00EEBA51 /* Web3 in Frameworks */,
+				F11569772E76F73D00EEBA51 /* Web3Auth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -149,11 +143,8 @@
 			name = airmeishi;
 			packageProductDependencies = (
 				F1134EA52E757F230097A2A4 /* Semaphore */,
-				F11566D92E75F0C000EEBA51 /* ReownAppKit */,
-				F11569672E76E66A00EEBA51 /* WalletConnect */,
-				F115696B2E76E7B100EEBA51 /* CryptoSwift */,
-				F115696D2E76E7BF00EEBA51 /* Web3 */,
-				F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */,
+				F11569762E76F73D00EEBA51 /* Web3Auth */,
+				F11569792E76F74100EEBA51 /* Web3 */,
 			);
 			productName = airmeishi;
 			productReference = F1133D7E2E70600A0097A2A4 /* airmeishi.app */;
@@ -239,9 +230,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */,
-				F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */,
-				F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */,
-				F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */,
+				F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */,
+				F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
@@ -667,28 +657,20 @@
 				kind = branch;
 			};
 		};
-		F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */ = {
+		F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/reown-com/reown-swift";
+			repositoryURL = "https://github.com/web3auth/web3auth-swift-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.7.3;
+				minimumVersion = 11.1.0;
 			};
 		};
-		F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */ = {
+		F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Boilertalk/Web3.swift.git";
+			repositoryURL = "https://github.com/chainnodesorg/Web3.swift";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 0.8.8;
-			};
-		};
-		F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/krzyzanowskim/CryptoSwift.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.9.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -699,30 +681,15 @@
 			package = F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */;
 			productName = Semaphore;
 		};
-		F11566D92E75F0C000EEBA51 /* ReownAppKit */ = {
+		F11569762E76F73D00EEBA51 /* Web3Auth */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
-			productName = ReownAppKit;
+			package = F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */;
+			productName = Web3Auth;
 		};
-		F11569672E76E66A00EEBA51 /* WalletConnect */ = {
+		F11569792E76F74100EEBA51 /* Web3 */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
-			productName = WalletConnect;
-		};
-		F115696B2E76E7B100EEBA51 /* CryptoSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F115696A2E76E7A000EEBA51 /* XCRemoteSwiftPackageReference "CryptoSwift" */;
-			productName = CryptoSwift;
-		};
-		F115696D2E76E7BF00EEBA51 /* Web3 */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F11569692E76E79600EEBA51 /* XCRemoteSwiftPackageReference "Web3.swift" */;
+			package = F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */;
 			productName = Web3;
-		};
-		F115696F2E76EA4A00EEBA51 /* WalletConnectNetworking */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F11566D82E75F08400EEBA51 /* XCRemoteSwiftPackageReference "reown-swift" */;
-			productName = WalletConnectNetworking;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
