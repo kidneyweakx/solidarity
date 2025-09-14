@@ -218,7 +218,7 @@ private extension BusinessCardListView {
     @ViewBuilder
     var focusedOverlay: some View {
         if isFeatured, let card = featuredCard {
-            Color.black.opacity(0.45).ignoresSafeArea()
+            Color.black.opacity(0.75).ignoresSafeArea()
                 .transition(.opacity)
                 .onTapGesture {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
@@ -269,13 +269,19 @@ private struct WalletStackListView: View {
                         .scaleEffect(1 - CGFloat(min(index, 4)) * 0.02)
                         .zIndex(Double(index))
                         .onTapGesture { onFocus(card) }
-                        .gesture(
+                        .simultaneousGesture(
                             DragGesture()
                                 .onChanged { value in
-                                    onDrag(card, value.translation)
+                                    let translation = value.translation
+                                    if abs(translation.width) > abs(translation.height) {
+                                        onDrag(card, translation)
+                                    }
                                 }
-                                .onEnded { _ in
-                                    onDragEnd(card)
+                                .onEnded { value in
+                                    let translation = value.translation
+                                    if abs(translation.width) > abs(translation.height) {
+                                        onDragEnd(card)
+                                    }
                                 }
                         )
                         .padding(.horizontal, 16)

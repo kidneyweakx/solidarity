@@ -50,26 +50,39 @@ struct FocusedCardView: View {
                 .padding(10)
             }
             HStack(spacing: 12) {
-                Button("Close") { onClose() }
-                    .buttonStyle(.bordered)
+                Button(role: .cancel) { onClose() } label: {
+                    Label("Close", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(.bordered)
                 Button("Delete", role: .destructive) { onDelete() }
                     .buttonStyle(.borderedProminent)
+                    .foregroundColor(.gray)
             }
         }
     }
     
     @ViewBuilder
     private func cardContent() -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(card.name).font(.title2).bold().foregroundColor(.black)
-            if let company = card.company { Text(company).foregroundColor(.black.opacity(0.7)) }
-            if let title = card.title { Text(title).font(.subheadline).foregroundColor(.black.opacity(0.6)) }
-            Spacer()
-            HStack {
-                if let email = card.email { label("envelope", email) }
-                Spacer()
-                if let phone = card.phone { label("phone", phone) }
+        HStack(alignment: .top, spacing: 14) {
+            if let animal = card.animal {
+                ImageProvider.animalImage(for: animal)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(card.name).font(.title2.weight(.bold)).foregroundColor(.black)
+                if let company = card.company { Text(company).foregroundColor(.black.opacity(0.7)) }
+                if let title = card.title { Text(title).font(.subheadline).foregroundColor(.black.opacity(0.6)) }
+                Spacer()
+                HStack {
+                    if let email = card.email { label("envelope", email) }
+                    Spacer(minLength: 8)
+                    if let phone = card.phone { label("phone", phone) }
+                }
+            }
+            Spacer(minLength: 0)
         }
         .padding(18)
     }
@@ -89,7 +102,7 @@ struct FocusedCardView: View {
         let hue = Double(abs(hash % 360)) / 360.0
         let c1 = Color(hue: hue, saturation: 0.7, brightness: 1.0)
         let c2 = Color.white
-        return LinearGradient(colors: [c2, c1.opacity(0.24)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        return LinearGradient(colors: [c2, c1.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 

@@ -17,10 +17,10 @@ struct TabBarIcon: View {
                                 colors: [Color.white.opacity(0.25), Color.white.opacity(0.0)],
                                 center: .center,
                                 startRadius: 1,
-                                endRadius: 18
+                                endRadius: 14
                             )
                         )
-                        .frame(width: 24, height: 24)
+                        .frame(width: 20, height: 20)
                 }
                 Image(systemName: systemName)
                     .symbolRenderingMode(.monochrome)
@@ -31,9 +31,11 @@ struct TabBarIcon: View {
             Text(title)
                 .font(.footnote)
                 .foregroundColor(isSelected ? .white : Color(white: 0.65))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 2)
+        .padding(.top, 6)
+        .padding(.bottom, 4)
     }
 }
 
@@ -44,15 +46,16 @@ struct FloatingTabBarBackdrop: View {
         ZStack {
             // Flat, semi-transparent surface for Material-like feel
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 )
+                .shadow(color: Color.black.opacity(0.25), radius: 12, y: 6)
         }
-        .frame(height: 54)
+        .frame(height: 64)
         .padding(.horizontal, 16)
-        .padding(.bottom, 22)
+        .padding(.bottom, 10)
         .background(Color.clear)
         .accessibilityHidden(true)
     }
@@ -83,21 +86,23 @@ struct CustomFloatingTabBar: View {
                 TabBarButton(systemName: "list.bullet.rectangle", title: "Glossary", isSelected: selectedTab == MainAppTab.glossary.rawValue) {
                     selectedTab = MainAppTab.glossary.rawValue
                 }
-                Spacer(minLength: 16)
+                Spacer(minLength: 20)
                 TabBarButton(systemName: "circle.grid.2x2", title: "Sharing", isSelected: selectedTab == MainAppTab.sharing.rawValue) {
                     selectedTab = MainAppTab.sharing.rawValue
                 }
-                Spacer(minLength: 16)
+                Spacer(minLength: 20)
                 TabBarButton(systemName: "bolt", title: "Shoutout", isSelected: selectedTab == MainAppTab.shoutout.rawValue) {
                     selectedTab = MainAppTab.shoutout.rawValue
                 }
-                Spacer(minLength: 16)
+                Spacer(minLength: 20)
                 TabBarButton(systemName: "target", title: "ID", isSelected: selectedTab == MainAppTab.id.rawValue) {
                     selectedTab = MainAppTab.id.rawValue
                 }
             }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 12)
+            .frame(height: 64)
+            .padding(.horizontal, 28)
+            .padding(.bottom, 6)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .ignoresSafeArea(edges: .bottom)
     }
