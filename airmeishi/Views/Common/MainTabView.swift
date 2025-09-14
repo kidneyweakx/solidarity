@@ -8,6 +8,7 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var tabStatus: String?
     @State private var isTabWorking = false
+    @State private var showingProximityFullscreen = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -15,7 +16,7 @@ struct MainTabView: View {
                 BusinessCardListView()
                     .tag(0)
                 
-                SharingTabView()
+                MatchingView()
                     .tag(1)
                 
                 ShoutoutView()
@@ -60,6 +61,15 @@ struct MainTabView: View {
         }
         .onReceive(deepLinkManager.$pendingAction) { action in
             handleDeepLinkAction(action)
+        }
+        .onChange(of: selectedTab) { newTab in
+            if newTab == 1 {
+                showingProximityFullscreen = true
+                selectedTab = 0 // Reset to first tab
+            }
+        }
+        .fullScreenCover(isPresented: $showingProximityFullscreen) {
+            ProximitySharingView()
         }
     }
     
