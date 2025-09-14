@@ -195,8 +195,8 @@ private struct WalletStackListView: View {
     let onDrag: (BusinessCard, CGSize) -> Void
     let onDragEnd: (BusinessCard) -> Void
     
-    private let cardHeight: CGFloat = 200
-    private let overlap: CGFloat = 64
+    private let cardHeight: CGFloat = 220
+    private let overlap: CGFloat = 72
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -224,7 +224,7 @@ private struct WalletStackListView: View {
             }
             .padding(.bottom, 40)
         }
-        .scrollDisabled(cards.count <= 3) // Disable scroll if 3 or fewer cards
+        .scrollDisabled(false)
     }
 }
 
@@ -239,27 +239,50 @@ private struct WalletCardView: View {
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(perCardGradient(card: card))
-                .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 12)
+                .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(theme.cardAccent.opacity(0.35), lineWidth: 1)
                 )
-                .overlay(alignment: .topLeading) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(card.name)
-                            .font(.title2).bold()
-                            .foregroundColor(.black)
-                        if let company = card.company { Text(company).foregroundColor(.black.opacity(0.7)) }
-                        if let title = card.title { Text(title).font(.subheadline).foregroundColor(.black.opacity(0.6)) }
+                .overlay {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(card.name)
+                                .font(.title2.weight(.bold))
+                                .foregroundColor(.black)
+                            if let company = card.company { Text(company).foregroundColor(.black.opacity(0.75)) }
+                            if let title = card.title { Text(title).font(.subheadline).foregroundColor(.black.opacity(0.65)) }
+                            Spacer()
+                            HStack(spacing: 6) {
+                                ForEach(card.skills.prefix(3)) { skill in
+                                    Text(skill.name)
+                                        .font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.white.opacity(0.18))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                        .padding(16)
+                        Spacer()
+                        if let animal = card.animal {
+                            ImageProvider.animalImage(for: animal)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 96, height: 96)
+                                .opacity(0.95)
+                                .padding(.trailing, 14)
+                                .padding(.top, 8)
+                        }
                     }
-                    .padding(16)
                 }
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isFlipped)
                 .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
-            
+
             HStack(spacing: 8) {
                 CategoryTag(text: category(for: card))
                 Button(action: editTapped) {
@@ -307,7 +330,24 @@ private struct WalletCardView: View {
     }
     
     private func perCardGradient(card: BusinessCard) -> LinearGradient {
-        // deterministic hue by UUID hash for variety
+        // Theme by animal when present
+        if let animal = card.animal {
+            let colors: [Color]
+            switch animal {
+            case .dog:
+                colors = [Color(hex: 0xFFF8E1), Color(hex: 0xFFD54F).opacity(0.35)]
+            case .horse:
+                colors = [Color(hex: 0xE8EAF6), Color(hex: 0x5C6BC0).opacity(0.35)]
+            case .pig:
+                colors = [Color(hex: 0xFCE4EC), Color(hex: 0xF06292).opacity(0.35)]
+            case .sheep:
+                colors = [Color(hex: 0xE8F5E9), Color(hex: 0x66BB6A).opacity(0.35)]
+            case .dove:
+                colors = [Color(hex: 0xE0F7FA), Color(hex: 0x26C6DA).opacity(0.35)]
+            }
+            return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+        // Fallback deterministic hue by UUID
         let hash = card.id.uuidString.hashValue
         let hue = Double(abs(hash % 360)) / 360.0
         let base = Color(hue: hue, saturation: 0.55, brightness: 0.95)

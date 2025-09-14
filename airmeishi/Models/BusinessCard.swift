@@ -16,6 +16,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
     var email: String?
     var phone: String?
     var profileImage: Data?
+    var animal: AnimalCharacter?
     var socialNetworks: [SocialNetwork]
     var skills: [Skill]
     var categories: [String]
@@ -31,6 +32,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
         email: String? = nil,
         phone: String? = nil,
         profileImage: Data? = nil,
+        animal: AnimalCharacter? = nil,
         socialNetworks: [SocialNetwork] = [],
         skills: [Skill] = [],
         categories: [String] = [],
@@ -45,6 +47,7 @@ struct BusinessCard: Codable, Identifiable, Equatable {
         self.email = email
         self.phone = phone
         self.profileImage = profileImage
+        self.animal = animal
         self.socialNetworks = socialNetworks
         self.skills = skills
         self.categories = categories

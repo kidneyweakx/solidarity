@@ -75,6 +75,14 @@ extension Color {
         return nil
         #endif
     }
+
+    /// Create a Color from 0xRRGGBB integer
+    init(hex: Int) {
+        let r = Double((hex >> 16) & 0xFF) / 255.0
+        let g = Double((hex >> 8) & 0xFF) / 255.0
+        let b = Double(hex & 0xFF) / 255.0
+        self = Color(red: r, green: g, blue: b)
+    }
 }
 
 // MARK: - View helpers
