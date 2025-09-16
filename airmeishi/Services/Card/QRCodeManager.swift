@@ -250,7 +250,7 @@ class QRCodeManager: NSObject, ObservableObject {
         filter.setValue("H", forKey: "inputCorrectionLevel") // High error correction
         
         guard let ciImage = filter.outputImage else {
-            return .failure(.sharingError("Failed to generate QR code"))
+            return .failure(.sharingError("Failed to generate QR code (beta not supported yet)"))
         }
         
         // Scale up the image for better quality
