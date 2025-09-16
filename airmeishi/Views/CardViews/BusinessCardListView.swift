@@ -465,9 +465,9 @@ private struct EmptyWalletView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "person.crop.rectangle").font(.system(size: 64)).foregroundColor(.white.opacity(0.4))
-            Text("Business Card Not Found").font(.title2).bold().foregroundColor(.white)
-            Text("Add a card or scan to get started").foregroundColor(.white.opacity(0.7))
+            Image(systemName: "person.crop.rectangle").font(.system(size: 64)).foregroundColor(.secondary)
+            Text("Business Card Not Found").font(.title2).bold().foregroundColor(.primary)
+            Text("Add a card or scan to get started").foregroundColor(.secondary)
             HStack(spacing: 12) {
                 Button("Add Card", action: onCreate).buttonStyle(.borderedProminent)
                 Button("Scan Card", action: onScan).buttonStyle(.bordered).foregroundColor(.gray)

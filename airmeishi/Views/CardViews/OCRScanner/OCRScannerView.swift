@@ -130,6 +130,7 @@ struct OCRScannerView: View {
                 showingLanguageSelection = false
             }
             .buttonStyle(.borderedProminent)
+            .tint(.accentColor)
             .padding(.top, 20)
         }
     }

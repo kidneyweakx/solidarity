@@ -454,7 +454,7 @@ struct IDView: View {
 }
 
 // MARK: - Create Group Sheet
-// @TODO: this need to call api to create group 
+// Note: Local-only group creation (API removed)
 private struct CreateGroupSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var groupName: String = ""
@@ -462,86 +462,53 @@ private struct CreateGroupSheet: View {
     @ObservedObject private var idm = SemaphoreIdentityManager.shared
     @ObservedObject private var manager = SemaphoreGroupManager.shared
     @State private var isCreating = false
-    @State private var localErrorMessage: String?
-    @State private var showLocalErrorAlert = false
-    @State private var creationOwnerAddress: String = ""
-    @State private var showSpinner: Bool = false
-    @State private var spinnerProgress: Double = 0
+    @FocusState private var nameFieldFocused: Bool
+    private var trimmedName: String { groupName.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isNameValid: Bool { trimmedName.count >= 3 }
 
     var body: some View {
         Form {
             Section("New Group") {
-                TextField("Group name", text: $groupName)
-                    .textInputAutocapitalization(.words)
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Group name", text: $groupName)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .focused($nameFieldFocused)
+                        .onSubmit { if isNameValid { localCreate() } }
+                    if !isNameValid && !groupName.isEmpty {
+                        Text("Name must be at least 3 characters")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
                 Toggle("Include my identity", isOn: $includeSelf)
             }
             Section {
-                if showSpinner {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ProgressView(value: spinnerProgress, total: 90)
-                            .progressViewStyle(.linear)
-                        Text("Provisioning... ~90s")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                Button {
+                    localCreate()
+                } label: {
+                    Text(isCreating ? "Creating..." : "Create Group")
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-                Button(isCreating ? "Creating... (long press)" : "Create (tap = local, long press = API)") {}
-                    .onTapGesture { localCreate() }
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 0.5)
-                            .onEnded { _ in create() }
-                    )
-                    .disabled(isCreating || groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .buttonStyle(.borderedProminent)
+                .disabled(isCreating || !isNameValid)
             }
         }
-        .navigationTitle("Create Group (ENS enabled)")
+        .navigationTitle("Create Group")
         .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Cancel") { dismiss() } } }
-        .alert("Error", isPresented: $showLocalErrorAlert) { Button("OK", role: .cancel) {} } message: { Text(localErrorMessage ?? "Unknown error") }
-    }
-    // tree root
-    private func create() {
-        if isCreating { return }
-        isCreating = true
-        let name = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
-        var members: [String] = []
-        if includeSelf, let bundle = idm.getIdentity() ?? (try? idm.loadOrCreateIdentity()) { members.append(bundle.commitment) }
-        let owner = randomEthAddress()
-        creationOwnerAddress = owner
-        let payload = CreateGroupRequest(
-            name: name,
-            members: members.isEmpty ? nil : members,
-            ownerAddress: owner,
-            skipEns: nil
-        )
-        Task {
-            startSpinnerCountdown()
-            let service = GroupsService()
-            let result = await service.createGroup(payload)
-            switch result {
-            case .success(let resp):
-                // Mirror server state locally
-                let created = manager.createGroup(name: resp.name, initialMembers: resp.members, ownerAddress: owner)
-                manager.updateRoot(resp.tree_root)
-                DispatchQueue.main.async { _ = created; isCreating = false; showSpinner = false; spinnerProgress = 0; dismiss() }
-            case .failure(let err):
-                DispatchQueue.main.async {
-                    isCreating = false
-                    showSpinner = false
-                    spinnerProgress = 0
-                    localErrorMessage = err.localizedDescription
-                    showLocalErrorAlert = true
-                }
-            }
-        }
+        .onAppear { nameFieldFocused = true }
     }
 
     private func localCreate() {
         if isCreating { return }
-        let name = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isNameValid else { return }
+        let name = trimmedName
         var members: [String] = []
         if includeSelf, let bundle = idm.getIdentity() ?? (try? idm.loadOrCreateIdentity()) { members.append(bundle.commitment) }
         let owner = randomEthAddress()
         _ = manager.createGroup(name: name, initialMembers: members, ownerAddress: owner)
+        groupName = ""
         dismiss()
     }
 
@@ -550,24 +517,6 @@ private struct CreateGroupSheet: View {
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         let hex = bytes.map { String(format: "%02x", $0) }.joined()
         return "0x" + hex
-    }
-
-    private func startSpinnerCountdown() {
-        showSpinner = true
-        spinnerProgress = 0
-        // Approximately 90 seconds; tick every second
-        var elapsed = 0
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            if !isCreating {
-                timer.invalidate()
-                return
-            }
-            elapsed += 1
-            spinnerProgress = Double(elapsed)
-            if elapsed >= 90 {
-                timer.invalidate()
-            }
-        }
     }
 }
 
