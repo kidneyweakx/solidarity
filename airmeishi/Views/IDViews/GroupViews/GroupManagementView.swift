@@ -21,12 +21,12 @@ struct GroupManagementView: View {
     @State private var ensResolvedAddress: String? = nil
     @State private var isResolvingENS: Bool = false
     @State private var isFetchingRoot: Bool = false
-    @State private var joinQRImage: UIImage? = nil
     @State private var activeSheet: SheetType? = nil
+    @State private var showDeleteConfirm: Bool = false
     @Environment(\.dismiss) private var dismiss
 
     private enum SheetType: String, Identifiable {
-        case root, add, revoke, invite
+        case root, add, revoke, ens
         var id: String { rawValue }
     }
 
@@ -67,7 +67,9 @@ struct GroupManagementView: View {
                             Divider().padding(.leading, 60)
                             ModernNodeRow(icon: "person.badge.minus", title: "Remove Member", subtitle: "Revoke member access") { activeSheet = .revoke }
                             Divider().padding(.leading, 60)
-                            ModernNodeRow(icon: "qrcode", title: "Generate Invite", subtitle: "Create QR code or share link") { activeSheet = .invite }
+                            ModernNodeRow(icon: "sparkles", title: "ENS Mode", subtitle: "Upgrade or bind to ENS") { activeSheet = .ens }
+                            Divider().padding(.leading, 60)
+                            DangerNodeRow(icon: "trash", title: "Delete Group", subtitle: "Remove group and its card") { showDeleteConfirm = true }
                         }
                         .background(
                             RoundedRectangle(cornerRadius: 16)
@@ -127,14 +129,22 @@ struct GroupManagementView: View {
                 AddMemberSheet
             case .revoke:
                 RevokeMemberSheet
-            case .invite:
-                InviteSheet
+            case .ens:
+                ENSSheet
             }
         }
         .alert("Add Member Failed", isPresented: $showAddMemberError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(addMemberErrorMessage ?? "Unknown error")
+        }
+        .alert("Delete Group?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                group.deleteSelectedGroup()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove the group and its associated card. This action cannot be undone.")
         }
     }
 
@@ -154,23 +164,7 @@ struct GroupManagementView: View {
         if let root = group.merkleRoot { UIPasteboard.general.string = root }
     }
 
-    private func makeJoinURL() -> String {
-        let ens = ensName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !ens.isEmpty else { return "" }
-        var comps = URLComponents(string: "https://airmeishi.app")
-        comps?.path = "/group/join"
-        var items: [URLQueryItem] = [URLQueryItem(name: "ens", value: ens)]
-        if let root = group.merkleRoot { items.append(URLQueryItem(name: "root", value: root)) }
-        comps?.queryItems = items
-        return comps?.url?.absoluteString ?? ""
-    }
-
-    private func generateJoinQR() {
-        let url = makeJoinURL()
-        guard !url.isEmpty else { return }
-        let result = QRCodeManager.shared.generateQRCode(from: url)
-        if case .success(let image) = result { self.joinQRImage = image }
-    }
+    // Invite URL and QR generation removed in favor of ENS Mode
 
     private func addMemberAction() {
         let commitment = newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -878,84 +872,87 @@ struct GroupManagementView: View {
         }
     }
 
-    private var InviteSheet: some View {
+    private var ENSSheet: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Generate Invite")
+                        Text("ENS Mode")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                        Text("Create shareable links and QR codes for group invitations")
+                        Text("Upgrade or bind your group to ENS")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
-                    
-                    // Invite URL Section
+
+                    // Upgrade Section
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Invite URL")
+                        Text("Upgrade")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .padding(.horizontal, 20)
-                        
+
+                        VStack(spacing: 12) {
+                            PremiumFeatureRow(
+                                icon: "sparkles",
+                                title: "Upgrade to ENS Mode",
+                                subtitle: "Advanced features backed by ENS",
+                                price: "$5",
+                                isEnabled: false
+                            )
+                        }
+                        .padding(.horizontal, 20)
+                    }
+
+                    // Bind Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Bind to ENS")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 20)
+
                         VStack(spacing: 16) {
-                    let urlString = makeJoinURL()
-                            
-                            if !urlString.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Generated URL")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
-                                    
-                                    Text(urlString)
-                                        .font(.system(.body, design: .monospaced))
-                                        .textSelection(.enabled)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color(.systemGray6))
-                                        )
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                            
-                            HStack(spacing: 12) {
-                                Button(action: { generateJoinQR() }) {
-                                    HStack {
-                                        Image(systemName: "qrcode")
-                                        Text("Generate QR Code")
-                                    }
-                                    .frame(maxWidth: .infinity)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("ENS Name")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+
+                                TextField("mygroup.eth", text: $ensName)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.accentColor)
+                                            .fill(Color(.systemGray6))
                                     )
-                                    .foregroundColor(.white)
-                                }
-                                .disabled(urlString.isEmpty)
-                                
-                                Button(action: { UIPasteboard.general.string = urlString }) {
-                    HStack {
-                                        Image(systemName: "doc.on.doc")
-                                        Text("Copy URL")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.accentColor, lineWidth: 1)
-                                    )
-                                    .foregroundColor(.accentColor)
-                                }
-                                .disabled(urlString.isEmpty)
                             }
                             .padding(.horizontal, 20)
+
+                            Button(action: { /* TODO: bind to ENS when backend ready */ }) {
+                                HStack {
+                                    Image(systemName: "link")
+                                    Text("Bind")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.accentColor)
+                                )
+                                .foregroundColor(.white)
+                            }
+                            .disabled(ensName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .padding(.horizontal, 20)
+
+                            Text("Binding requires network support and will be available soon.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 20)
                         }
                         .background(
                             RoundedRectangle(cornerRadius: 16)
@@ -964,84 +961,17 @@ struct GroupManagementView: View {
                                 .padding(.horizontal, 20)
                         )
                     }
-                    
-                    // QR Code Section
-                if let img = joinQRImage {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("QR Code")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 20)
-                            
-                            VStack(spacing: 16) {
-                                VStack(spacing: 12) {
-                        Image(uiImage: img)
-                            .resizable()
-                            .interpolation(.none)
-                            .scaledToFit()
-                            .frame(height: 250)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.white)
-                                        )
-                                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                                    
-                                    Text("Scan this QR code to join the group")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 20)
-                            }
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-                                    .padding(.horizontal, 20)
-                            )
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("QR Code")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 20)
-                            
-                            VStack(spacing: 16) {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "qrcode")
-                                        .font(.largeTitle)
-                                        .foregroundColor(.secondary)
-                                        .padding(.vertical, 40)
-                                    
-                                    Text("Generate QR code to display here")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 20)
-                            }
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-                                    .padding(.horizontal, 20)
-                            )
-                        }
-                    }
-                    
+
                     Spacer(minLength: 40)
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Generate Invite")
+            .navigationTitle("ENS Mode")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { 
-                ToolbarItem(placement: .navigationBarTrailing) { 
-                    Button("Done") { activeSheet = nil } 
-                } 
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { activeSheet = nil }
+                }
             }
         }
     }
@@ -1141,6 +1071,47 @@ private struct PremiumFeatureRow: View {
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
         .opacity(isEnabled ? 1.0 : 0.6)
+    }
+}
+
+private struct DangerNodeRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.red)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
