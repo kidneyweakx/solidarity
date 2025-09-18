@@ -9,10 +9,6 @@ import SwiftUI
 import PassKit
 import Foundation
 
-#if canImport(CoinbaseWalletSDK)
-import CoinbaseWalletSDK
-#endif
-
 @main
 struct airmeishiApp: App {
     // Initialize core managers
@@ -65,21 +61,6 @@ struct airmeishiApp: App {
         
         // Note: Data is automatically loaded in the managers' init methods
         print("App setup completed")
-
-        // Configure Coinbase Wallet SDK
-        #if canImport(CoinbaseWalletSDK)
-        print("🔗 [App] Configuring Coinbase Wallet SDK...")
-        let callbackURL = URL(string: "airmeishi://")!
-        print("🔗 [App] Callback URL: \(callbackURL)")
-        print("🔗 [App] Callback scheme: \(callbackURL.scheme ?? "nil")")
-        print("🔗 [App] Callback host: \(callbackURL.host ?? "nil")")
-        print("🔗 [App] Callback path: \(callbackURL.path)")
-        
-        CoinbaseWalletSDK.configure(callback: callbackURL)
-        print("🔗 [App] Coinbase Wallet SDK configured successfully")
-        #else
-        print("🔗 [App] Coinbase Wallet SDK not available - skipping configuration")
-        #endif
     }
     
     /// Handle incoming URLs from various sources
@@ -91,52 +72,12 @@ struct airmeishiApp: App {
         print("🔗 [App] URL query: \(url.query ?? "nil")")
         print("🔗 [App] URL absoluteString: \(url.absoluteString)")
         
-        #if canImport(CoinbaseWalletSDK)
-        print("🔗 [App] Attempting Coinbase Wallet SDK handling...")
-        
-        // Decode the URL parameter to see what's inside
-        if let query = url.query, query.contains("p=") {
-            print("🔗 [App] Decoding URL parameter...")
-            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            if let p = components?.queryItems?.first(where: { $0.name == "p" })?.value {
-                if let data = Data(base64Encoded: p) {
-                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        print("🔗 [App] Decoded content: \(json)")
-                    } else {
-                        print("🔗 [App] Failed to decode JSON from base64")
-                    }
-                } else {
-                    print("🔗 [App] Failed to decode base64")
-                }
-            }
-        }
-        
-        do {
-            let handledByWallet = try CoinbaseWalletSDK.shared.handleResponse(url)
-            print("🔗 [App] Coinbase Wallet SDK result: \(handledByWallet)")
-        } catch {
-            print("🔗 [App] Coinbase Wallet SDK error: \(error)")
-        }
-        
-        // Try alternative handling methods
-        let handledByWallet = (try? CoinbaseWalletSDK.shared.handleResponse(url)) == true
-        
-        // If the standard method fails, try handling it as a deep link
-        if !handledByWallet {
-            print("🔗 [App] Standard handling failed, trying alternative...")
-            // The URL might need to be handled differently
-            // Let's see if we can extract the response data manually
-        }
-        #else
-        print("🔗 [App] Coinbase Wallet SDK not available")
-        let handledByWallet = false
-        #endif
-        
+        // Coinbase handling removed; rely on app deep link handling
         print("🔗 [App] Attempting DeepLinkManager handling...")
         let handledByDeepLink = deepLinkManager.handleIncomingURL(url)
         print("🔗 [App] DeepLinkManager result: \(handledByDeepLink)")
         
-        let handled = handledByDeepLink || handledByWallet
+        let handled = handledByDeepLink
         print("🔗 [App] Overall handled: \(handled)")
         
         if !handled {
