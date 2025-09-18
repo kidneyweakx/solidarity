@@ -361,11 +361,33 @@ extension ZKIdentitySettingsView {
                 }
             } else {
                 Button {
+                    print("🔗 [Wallet] Starting connection process...")
+                    print("🔗 [Wallet] isRequestInFlight: \(wallet.isRequestInFlight)")
+                    print("🔗 [Wallet] isConnected: \(wallet.isConnected)")
                     wallet.connectAndRequestAccounts()
                 } label: {
                     Label("Connect Coinbase Wallet", systemImage: "link")
                 }
                 .buttonStyle(AccentGradientButtonStyle())
+            }
+            
+            // Debug info
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Debug Info")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Connected: \(wallet.isConnected ? "Yes" : "No")")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text("Request In Flight: \(wallet.isRequestInFlight ? "Yes" : "No")")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                if let error = wallet.lastErrorMessage {
+                    Text("Last Error: \(error)")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(14)

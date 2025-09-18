@@ -24,28 +24,67 @@ final class CoinbaseWalletService: ObservableObject {
     // MARK: - Handshake / Connect
     func connectAndRequestAccounts() {
         #if canImport(CoinbaseWalletSDK)
-        guard !isRequestInFlight else { return }
+        guard !isRequestInFlight else { 
+            print("🔗 [Wallet] Request already in flight, skipping")
+            return 
+        }
+        print("🔗 [Wallet] Setting isRequestInFlight = true")
         isRequestInFlight = true
 
+        print("🔗 [Wallet] Creating eth_requestAccounts action")
         let requestAccounts = Action(jsonRpc: .eth_requestAccounts)
+        print("🔗 [Wallet] Action created: \(requestAccounts)")
+        
+        print("🔗 [Wallet] Calling initiateHandshake...")
+        
+        // Add timeout detection
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            guard let self = self else { return }
+            if self.isRequestInFlight {
+                print("🔗 [Wallet] Handshake timeout - no response after 10 seconds")
+                self.isRequestInFlight = false
+                self.lastErrorMessage = "Connection timeout - please try again"
+            }
+        }
+        
         CoinbaseWalletSDK.shared.initiateHandshake(
             initialActions: [requestAccounts]
         ) { [weak self] result, account in
-            guard let self = self else { return }
+            print("🔗 [Wallet] Handshake callback received")
+            print("🔗 [Wallet] Result: \(result)")
+            print("🔗 [Wallet] Account: \(account?.address ?? "nil")")
+            
+            guard let self = self else { 
+                print("🔗 [Wallet] Self is nil in callback")
+                return 
+            }
+            
             DispatchQueue.main.async {
+                print("🔗 [Wallet] Setting isRequestInFlight = false")
                 self.isRequestInFlight = false
             }
+            
             if let address = account?.address {
+                print("🔗 [Wallet] Success! Address: \(address)")
                 DispatchQueue.main.async {
                     self.selectedAddress = address
                     self.isConnected = true
                     self.lastErrorMessage = nil
+                    print("🔗 [Wallet] Updated UI state - connected: \(self.isConnected), address: \(self.selectedAddress ?? "nil")")
                 }
             } else if case .failure(let error) = result {
-                DispatchQueue.main.async { self.lastErrorMessage = error.localizedDescription }
+                print("🔗 [Wallet] Error: \(error.localizedDescription)")
+                DispatchQueue.main.async { 
+                    self.lastErrorMessage = error.localizedDescription
+                    print("🔗 [Wallet] Set error message: \(self.lastErrorMessage ?? "nil")")
+                }
+            } else {
+                print("🔗 [Wallet] No address and no error - unexpected state")
             }
         }
+        print("🔗 [Wallet] initiateHandshake call completed")
         #else
+        print("🔗 [Wallet] CoinbaseWalletSDK not available")
         self.lastErrorMessage = "CoinbaseWalletSDK not linked. Add via SPM."
         #endif
     }
