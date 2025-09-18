@@ -31,6 +31,11 @@
 			<string>airmeishi.auth</string>
 		</dict>
 	</array>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>cbwallet</string>
+        <string>coinbasewallet</string>
+    </array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>

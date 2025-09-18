@@ -7,6 +7,11 @@
 
 import SwiftUI
 import PassKit
+import Foundation
+
+#if canImport(CoinbaseWalletSDK)
+import CoinbaseWalletSDK
+#endif
 
 @main
 struct airmeishiApp: App {
@@ -16,7 +21,6 @@ struct airmeishiApp: App {
     @StateObject private var proximityManager = ProximityManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
     @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var web3auth = Web3AuthManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -61,13 +65,25 @@ struct airmeishiApp: App {
         
         // Note: Data is automatically loaded in the managers' init methods
         print("App setup completed")
+
+        // Configure Coinbase Wallet SDK
+        #if canImport(CoinbaseWalletSDK)
+        CoinbaseWalletSDK.configure(
+            callback: URL(string: "airmeishi://")!
+        )
+        #endif
     }
     
     /// Handle incoming URLs from various sources
     private func handleIncomingURL(_ url: URL) {
         print("App received URL: \(url)")
         
-        let handled = deepLinkManager.handleIncomingURL(url) || web3auth.handleURL(url)
+        #if canImport(CoinbaseWalletSDK)
+        let handledByWallet = (try? CoinbaseWalletSDK.shared.handleResponse(url)) == true
+        #else
+        let handledByWallet = false
+        #endif
+        let handled = deepLinkManager.handleIncomingURL(url) || handledByWallet
         
         if !handled {
             print("Failed to handle URL: \(url)")

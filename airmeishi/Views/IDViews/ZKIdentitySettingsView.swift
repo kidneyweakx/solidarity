@@ -8,14 +8,12 @@
 import SwiftUI
 import CryptoKit
 import BigInt
-import Web3
-import Web3Auth
+import Foundation
 
 struct ZKIdentitySettingsView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
-    @StateObject private var web3Auth = Web3AuthManager.shared
-    @State private var web3RPC: Web3RPC?
+    @StateObject private var wallet = CoinbaseWalletService.shared
     
 
     @State private var identityCommitment: String = ""
@@ -31,15 +29,17 @@ struct ZKIdentitySettingsView: View {
     @State private var emailInput: String = ""
     @State private var showEmailLogin: Bool = false
     
-    // ENS Signing states
+    // ENS write states
     @State private var ensDomain: String = ""
-    @State private var ensSignature: String = ""
-    @State private var isSigningENS: Bool = false
+    @State private var ensKey: String = "url"
+    @State private var ensValue: String = "https://example.com"
+    @State private var resolverAddress: String = ""
+    @State private var isSendingENSTx: Bool = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                web3AuthHeader
+                walletHeader
                 sectionCard(title: "Identity", systemImage: "person.text.rectangle") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top) {
@@ -155,58 +155,37 @@ struct ZKIdentitySettingsView: View {
                     }
                 }
 
-                sectionCard(title: "ENS Signing", systemImage: "globe") {
+                sectionCard(title: "ENS Write (Sepolia)", systemImage: "globe") {
                     VStack(alignment: .leading, spacing: 12) {
                         TextField("ENS Domain (e.g., mygroup.eth)", text: $ensDomain)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Key (e.g., url, avatar)", text: $ensKey)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Value", text: $ensValue)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Resolver Address (0x... on Sepolia)", text: $resolverAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .textFieldStyle(.roundedBorder)
                         
                         HStack(spacing: 10) {
                             Button {
-                                signENS()
+                                sendENSTransaction()
                             } label: {
                                 HStack {
-                                    if isSigningENS {
+                                    if isSendingENSTx {
                                         ProgressView()
                                             .controlSize(.small)
                                     }
-                                    Label("Sign", systemImage: "pencil.and.outline")
+                                    Label("Send", systemImage: "paperplane")
                                 }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSigningENS || !web3Auth.isLoggedIn)
-                        }
-                        
-                        if !ensSignature.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("ENS Signature:")
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Button {
-                                        #if canImport(UIKit)
-                                        UIPasteboard.general.string = ensSignature
-                                        #endif
-                                        statusMessage = "Signature copied"
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { statusMessage = nil }
-                                    } label: {
-                                        Label("Copy", systemImage: "doc.on.doc")
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                                
-                                ScrollView {
-                                    Text(ensSignature)
-                                        .font(.footnote.monospaced())
-                                        .textSelection(.enabled)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .frame(minHeight: 60)
-                                .padding(8)
-                                .background(Color(uiColor: .tertiarySystemBackground))
-                                .cornerRadius(8)
-                            }
+                            .disabled(ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolverAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSendingENSTx || !wallet.isConnected)
                         }
                     }
                 }
@@ -307,54 +286,23 @@ struct ZKIdentitySettingsView: View {
         }
     }
     
-    // MARK: - ENS Functions
-    
-    // ENS resolution via API removed
-    
-    private func signENS() {
+    // MARK: - ENS Functions (send transaction via Coinbase Wallet)
+    private func sendENSTransaction() {
         guard !ensDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard web3Auth.isLoggedIn, let user = web3Auth.user else {
-            errorMessage = "Please login with Web3Auth first"
-            showErrorAlert = true
-            return
-        }
-        
-        isSigningENS = true
-        
-        // Initialize Web3RPC if not already done
-        if web3RPC == nil {
-            web3RPC = Web3RPC(user: user)
-        }
-        
-        guard let rpc = web3RPC else {
-            isSigningENS = false
-            errorMessage = "Failed to initialize Web3RPC"
-            showErrorAlert = true
-            return
-        }
-        
-        Task {
-            do {
-                // Create a message to sign that includes the ENS domain and current timestamp
-                let timestamp = Int(Date().timeIntervalSince1970)
-                let messageToSign = "I am the owner of \(ensDomain) at \(timestamp)"
-                
-                // Sign the message using Web3RPC
-                let signature = try rpc.signMessage(message: messageToSign)
-                
-                DispatchQueue.main.async {
-                    self.ensSignature = signature
-                    self.isSigningENS = false
-                    self.statusMessage = "ENS domain signed successfully"
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.statusMessage = nil }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isSigningENS = false
-                    self.errorMessage = "Failed to sign ENS domain: \(error.localizedDescription)"
-                    self.showErrorAlert = true
-                }
+        guard !resolverAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isSendingENSTx = true
+        wallet.addSepoliaChainIfNeeded()
+        wallet.switchToSepoliaIfNeeded()
+        CoinbaseWalletService.shared.sendENSSetText(domain: ensDomain, key: ensKey, value: ensValue, resolverAddress: resolverAddress)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.isSendingENSTx = false
+            if let tx = wallet.lastTransactionHash {
+                self.statusMessage = "ENS tx sent: \(tx)"
+            } else if let err = wallet.lastErrorMessage {
+                self.errorMessage = err
+                self.showErrorAlert = true
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.statusMessage = nil }
         }
     }
 
@@ -393,47 +341,31 @@ struct ZKIdentitySettingsView: View {
     NavigationView { ZKIdentitySettingsView() }
 }
 
-// MARK: - Web3Auth Header
+// MARK: - Wallet Header (Coinbase Wallet)
 
 extension ZKIdentitySettingsView {
-    private var web3AuthHeader: some View {
+    private var walletHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Wallet Login")
                 .font(.headline)
-
-            if web3Auth.isLoading {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text("Loading...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            if web3Auth.isLoggedIn {
+            if wallet.isConnected, let addr = wallet.selectedAddress {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Signed in")
+                    Text("Connected")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    if let addr = web3Auth.address {
-                        Text(addr)
-                            .font(.footnote.monospaced())
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                    }
-                    Button("Logout", role: .destructive) { web3Auth.logout() }
-                        .buttonStyle(.bordered)
+                    Text(addr)
+                        .font(.footnote.monospaced())
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                 }
             } else {
-                Button { web3Auth.login() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "apple.logo")
-                        Text("Sign In with Apple").fontWeight(.semibold)
-                    }
+                Button {
+                    wallet.connectAndRequestAccounts()
+                } label: {
+                    Label("Connect Coinbase Wallet", systemImage: "link")
                 }
                 .buttonStyle(AccentGradientButtonStyle())
-                .disabled(web3Auth.isLoading)
             }
         }
         .padding(14)

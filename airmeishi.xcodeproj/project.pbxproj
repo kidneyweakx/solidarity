@@ -8,8 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */ = {isa = PBXBuildFile; productRef = F1134EA52E757F230097A2A4 /* Semaphore */; };
-		F11569772E76F73D00EEBA51 /* Web3Auth in Frameworks */ = {isa = PBXBuildFile; productRef = F11569762E76F73D00EEBA51 /* Web3Auth */; };
-		F1156CBA2E76FD7F00EEBA51 /* Web3 in Frameworks */ = {isa = PBXBuildFile; productRef = F11569792E76F74100EEBA51 /* Web3 */; };
+		F1D505F72E79DD76005DBBAA /* CoinbaseWalletSDK in Frameworks */ = {isa = PBXBuildFile; productRef = F1D505F62E79DD76005DBBAA /* CoinbaseWalletSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,9 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F1156CBA2E76FD7F00EEBA51 /* Web3 in Frameworks */,
+				F1D505F72E79DD76005DBBAA /* CoinbaseWalletSDK in Frameworks */,
 				F1134EA62E757F230097A2A4 /* Semaphore in Frameworks */,
-				F11569772E76F73D00EEBA51 /* Web3Auth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,8 +141,7 @@
 			name = airmeishi;
 			packageProductDependencies = (
 				F1134EA52E757F230097A2A4 /* Semaphore */,
-				F11569762E76F73D00EEBA51 /* Web3Auth */,
-				F11569792E76F74100EEBA51 /* Web3 */,
+				F1D505F62E79DD76005DBBAA /* CoinbaseWalletSDK */,
 			);
 			productName = airmeishi;
 			productReference = F1133D7E2E70600A0097A2A4 /* airmeishi.app */;
@@ -230,8 +227,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */,
-				F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */,
-				F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */,
+				F1D505F32E79D74D005DBBAA /* XCRemoteSwiftPackageReference "wallet-mobile-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1133D7F2E70600A0097A2A4 /* Products */;
@@ -457,7 +453,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = kidneyweakx.airmeishi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -504,7 +500,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = kidneyweakx.airmeishi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -657,20 +653,12 @@
 				kind = branch;
 			};
 		};
-		F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */ = {
+		F1D505F32E79D74D005DBBAA /* XCRemoteSwiftPackageReference "wallet-mobile-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/web3auth/web3auth-swift-sdk";
+			repositoryURL = "https://github.com/MobileWalletProtocol/wallet-mobile-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 11.1.0;
-			};
-		};
-		F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/chainnodesorg/Web3.swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.8.8;
+				minimumVersion = 1.1.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -681,15 +669,10 @@
 			package = F1134EA32E757CE20097A2A4 /* XCRemoteSwiftPackageReference "SemaphoreSwift" */;
 			productName = Semaphore;
 		};
-		F11569762E76F73D00EEBA51 /* Web3Auth */ = {
+		F1D505F62E79DD76005DBBAA /* CoinbaseWalletSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F11569752E76F73200EEBA51 /* XCRemoteSwiftPackageReference "web3auth-swift-sdk" */;
-			productName = Web3Auth;
-		};
-		F11569792E76F74100EEBA51 /* Web3 */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F11569782E76F74000EEBA51 /* XCRemoteSwiftPackageReference "Web3" */;
-			productName = Web3;
+			package = F1D505F32E79D74D005DBBAA /* XCRemoteSwiftPackageReference "wallet-mobile-sdk" */;
+			productName = CoinbaseWalletSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
