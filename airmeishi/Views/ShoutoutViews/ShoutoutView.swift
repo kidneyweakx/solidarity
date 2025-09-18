@@ -15,7 +15,7 @@ struct ShoutoutView: View {
     @State private var searchText = ""
     @State private var showingCreateShoutout = false
     @State private var selectedContact: Contact?
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     
     var body: some View {
         NavigationView {
@@ -34,7 +34,7 @@ struct ShoutoutView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Lightning header with search
+                    // Lightening header with search
                     lightningHeader
                     
                     // Business card gallery
@@ -72,11 +72,11 @@ struct ShoutoutView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear {
-            startLightningAnimation()
+            startLighteningAnimation()
         }
     }
     
-    // MARK: - Lightning Header
+    // MARK: - Lightening Header
     
     private var lightningHeader: some View {
         VStack(spacing: 16) {
@@ -85,13 +85,13 @@ struct ShoutoutView: View {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.yellow)
                     .font(.title)
-                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
                 
-                Text("Lightning Gallery")
+                Text("Lightening Gallery")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -103,10 +103,10 @@ struct ShoutoutView: View {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 8, height: 8)
-                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                         .animation(
                             .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                     
                     Text("\(chartService.filteredData.count) cards")
@@ -168,9 +168,9 @@ struct ShoutoutView: View {
                 GridItem(.flexible(), spacing: 16)
             ], spacing: 16) {
                 ForEach(chartService.filteredData) { dataPoint in
-                    LightningCardView(
+                    LighteningCardView(
                         dataPoint: dataPoint,
-                        isLightningAnimating: isLightningAnimating
+                        isLighteningAnimating: isLighteningAnimating
                     ) {
                         selectedUser = dataPoint.user
                         showingUserDetail = true
@@ -181,12 +181,12 @@ struct ShoutoutView: View {
         }
     }
     
-    // MARK: - Floating Lightning Action Button
+    // MARK: - Floating Lightening Action Button
     
     private var lightningActionButton: some View {
         Button(action: { showingCreateShoutout = true }) {
             ZStack {
-                // Lightning bolt background
+                // Lightening bolt background
                 Circle()
                     .fill(
                         LinearGradient(
@@ -198,14 +198,14 @@ struct ShoutoutView: View {
                     .frame(width: 60, height: 60)
                     .shadow(color: .yellow.opacity(0.5), radius: 10, x: 0, y: 0)
                 
-                // Lightning icon
+                // Lightening icon
                 Image(systemName: "bolt.fill")
                     .font(.title2)
                     .foregroundColor(.white)
-                    .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
             }
         }
@@ -213,16 +213,16 @@ struct ShoutoutView: View {
     
     // MARK: - Animation Control
     
-    private func startLightningAnimation() {
-        isLightningAnimating = true
+    private func startLighteningAnimation() {
+        isLighteningAnimating = true
     }
 }
 
-// MARK: - Lightning Card View
+// MARK: - Lightening Card View
 
-struct LightningCardView: View {
+struct LighteningCardView: View {
     let dataPoint: ChartDataPoint
-    let isLightningAnimating: Bool
+    let isLighteningAnimating: Bool
     let onTap: () -> Void
     
     @State private var cardOffset: CGFloat = 0
@@ -259,31 +259,31 @@ struct LightningCardView: View {
                     .overlay(
                         Circle()
                             .stroke(
-                                isLightningAnimating ? Color.yellow : dataPoint.color,
-                                lineWidth: isLightningAnimating ? 3 : 2
+                                isLighteningAnimating ? Color.yellow : dataPoint.color,
+                                lineWidth: isLighteningAnimating ? 3 : 2
                             )
-                            .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                            .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
                             .animation(
                                 .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                                value: isLightningAnimating
+                                value: isLighteningAnimating
                             )
                     )
                     .shadow(
-                        color: isLightningAnimating ? .yellow.opacity(0.6) : dataPoint.color.opacity(0.5),
-                        radius: isLightningAnimating ? 8 : 4,
+                        color: isLighteningAnimating ? .yellow.opacity(0.6) : dataPoint.color.opacity(0.5),
+                        radius: isLighteningAnimating ? 8 : 4,
                         x: 0, y: 2
                     )
                     
                     Spacer()
                     
-                    // Lightning bolt indicator
+                    // Lightening bolt indicator
                     Image(systemName: "bolt.fill")
-                        .foregroundColor(isLightningAnimating ? .yellow : .gray)
+                        .foregroundColor(isLighteningAnimating ? .yellow : .gray)
                         .font(.caption)
-                        .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                         .animation(
                             .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                 }
                 
@@ -340,7 +340,7 @@ struct LightningCardView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isLightningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1),
+                                isLighteningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1),
                                 lineWidth: 1
                             )
                     )
@@ -384,7 +384,7 @@ struct CreateShoutoutView: View {
     @State private var recipient: ShoutoutUser?
     @State private var message = ""
     @State private var showingUserPicker = false
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     @State private var showingSuccess = false
     
     init(selectedUser: ShoutoutUser? = nil) {
@@ -408,7 +408,7 @@ struct CreateShoutoutView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 24) {
-                    // Lightning header
+                    // Lightening header
                     lightningHeader
                     
                     // Recipient Selection
@@ -424,7 +424,7 @@ struct CreateShoutoutView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Lightning Shoutout")
+            .navigationTitle("Lightening Shoutout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -445,27 +445,27 @@ struct CreateShoutoutView: View {
                 Text("Your lightning shoutout has been delivered! ⚡")
             }
             .onAppear {
-                startLightningAnimation()
+                startLighteningAnimation()
             }
         }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Lightning Header
+    // MARK: - Lightening Header
     
     private var lightningHeader: some View {
         HStack {
             Image(systemName: "bolt.fill")
                 .foregroundColor(.yellow)
                 .font(.title)
-                .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                 .animation(
                     .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                    value: isLightningAnimating
+                    value: isLighteningAnimating
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("Send Lightning Shoutout")
+                Text("Send Lightening Shoutout")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -522,10 +522,10 @@ struct CreateShoutoutView: View {
                         .overlay(
                             Circle()
                                 .stroke(Color.yellow, lineWidth: 2)
-                                .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                                .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
                                 .animation(
                                     .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                                    value: isLightningAnimating
+                                    value: isLighteningAnimating
                                 )
                         )
                         
@@ -572,7 +572,7 @@ struct CreateShoutoutView: View {
     private var messageInput: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Lightning Message")
+                Text("Lightening Message")
                     .font(.headline)
                     .foregroundColor(.white)
                 
@@ -594,7 +594,7 @@ struct CreateShoutoutView: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(
-                                        isLightningAnimating ? Color.yellow.opacity(0.5) : Color.white.opacity(0.1),
+                                        isLighteningAnimating ? Color.yellow.opacity(0.5) : Color.white.opacity(0.1),
                                         lineWidth: 1
                                     )
                             )
@@ -609,20 +609,20 @@ struct CreateShoutoutView: View {
         }
     }
     
-    // MARK: - Lightning Send Button
+    // MARK: - Lightening Send Button
     
     private var lightningSendButton: some View {
         Button(action: sendShoutout) {
             HStack(spacing: 12) {
                 Image(systemName: "bolt.fill")
                     .font(.title2)
-                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
                 
-                Text("Send Lightning Shoutout")
+                Text("Send Lightening Shoutout")
                     .font(.headline)
                     .fontWeight(.bold)
             }
@@ -650,7 +650,7 @@ struct CreateShoutoutView: View {
     private func sendShoutout() {
         // Simulate sending with lightning effect
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isLightningAnimating = true
+            isLighteningAnimating = true
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -658,8 +658,8 @@ struct CreateShoutoutView: View {
         }
     }
     
-    private func startLightningAnimation() {
-        isLightningAnimating = true
+    private func startLighteningAnimation() {
+        isLighteningAnimating = true
     }
 }
 
@@ -670,7 +670,7 @@ struct UserPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var chartService = ShoutoutChartService.shared
     @State private var searchText = ""
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     
     var filteredUsers: [ShoutoutUser] {
         if searchText.isEmpty {
@@ -703,9 +703,9 @@ struct UserPickerView: View {
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredUsers) { user in
-                                LightningUserRow(
+                                LighteningUserRow(
                                     user: user,
-                                    isLightningAnimating: isLightningAnimating
+                                    isLighteningAnimating: isLighteningAnimating
                                 ) {
                                     selectedUser = user
                                     dismiss()
@@ -727,7 +727,7 @@ struct UserPickerView: View {
                 }
             }
             .onAppear {
-                isLightningAnimating = true
+                isLighteningAnimating = true
             }
         }
         .preferredColorScheme(.dark)
@@ -763,11 +763,11 @@ struct UserPickerView: View {
     }
 }
 
-// MARK: - Lightning User Row
+// MARK: - Lightening User Row
 
-struct LightningUserRow: View {
+struct LighteningUserRow: View {
     let user: ShoutoutUser
-    let isLightningAnimating: Bool
+    let isLighteningAnimating: Bool
     let onTap: () -> Void
     
     @State private var isHovering = false
@@ -800,10 +800,10 @@ struct LightningUserRow: View {
                 .overlay(
                     Circle()
                         .stroke(Color.yellow, lineWidth: 2)
-                        .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
                         .animation(
                             .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                 )
                 
@@ -828,15 +828,15 @@ struct LightningUserRow: View {
                 
                 Spacer()
                 
-                // Lightning bolt and verification
+                // Lightening bolt and verification
                 VStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
-                        .foregroundColor(isLightningAnimating ? .yellow : .gray)
+                        .foregroundColor(isLighteningAnimating ? .yellow : .gray)
                         .font(.title3)
-                        .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                         .animation(
                             .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                     
                     Image(systemName: user.verificationStatus.systemImageName)
@@ -851,7 +851,7 @@ struct LightningUserRow: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isLightningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1),
+                                isLighteningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1),
                                 lineWidth: 1
                             )
                     )

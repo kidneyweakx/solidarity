@@ -15,7 +15,7 @@ struct NearbyPeersSheet: View {
     let onHandleViewLatestCard: () -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     @State private var searchText = ""
     @State private var selectedPeer: ProximityPeer?
     @State private var showingPeerDetail = false
@@ -63,10 +63,10 @@ struct NearbyPeersSheet: View {
                     .transition(.opacity)
                 }
             }
-            .navigationTitle("Lightning Peers")
+            .navigationTitle("Lightening Peers")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() }.foregroundColor(.white) } }
-            .onAppear { isLightningAnimating = true }
+            .onAppear { isLighteningAnimating = true }
             .sheet(isPresented: $showingPeerDetail) {
                 if let peer = selectedPeer { PeerDetailSheet(peer: peer) }
             }
@@ -78,17 +78,17 @@ struct NearbyPeersSheet: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "bolt.fill").foregroundColor(.yellow).font(.title)
-                    .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
-                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLightningAnimating)
+                    .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
+                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLighteningAnimating)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Lightning Peers").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                    Text("Lightening Peers").font(.title2).fontWeight(.bold).foregroundColor(.white)
                     Text("\(peers.count) nearby connections").font(.caption).foregroundColor(.gray)
                 }
                 Spacer()
                 HStack(spacing: 8) {
                     Circle().fill(connectedCount > 0 ? .green : .orange).frame(width: 8, height: 8)
-                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
-                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isLightningAnimating)
+                        .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
+                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isLighteningAnimating)
                     Text("\(connectedCount) connected").font(.caption).foregroundColor(.gray)
                 }
             }.padding(.horizontal)
@@ -117,7 +117,7 @@ struct NearbyPeersSheet: View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
                 ForEach(filteredPeers) { peer in
-                    LightningPeerCard(peer: peer, isLightningAnimating: isLightningAnimating, onTap: {
+                    LighteningPeerCard(peer: peer, isLighteningAnimating: isLighteningAnimating, onTap: {
                         selectedPeer = peer
                         showingPeerDetail = true
                     }, onConnect: {
@@ -135,12 +135,12 @@ struct NearbyPeersSheet: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle().stroke(Color.white.opacity(0.1), lineWidth: 2).frame(width: 120, height: 120)
-                    .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: isLightningAnimating)
+                    .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
+                    .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: isLighteningAnimating)
                 Image(systemName: "person.2.fill").font(.system(size: 40)).foregroundColor(.gray)
             }
             VStack(spacing: 8) {
-                Text("No Lightning Peers Yet").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                Text("No Lightening Peers Yet").font(.title2).fontWeight(.bold).foregroundColor(.white)
                 Text("Start matching to discover nearby professionals with lightning-fast connections")
                     .font(.body).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal, 32)
             }
@@ -165,9 +165,9 @@ struct NearbyPeersSheet: View {
             Button(action: onViewLatestCard) {
                 HStack(spacing: 12) {
                     Image(systemName: "bolt.fill").font(.title2)
-                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
-                        .animation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true), value: isLightningAnimating)
-                    Text("View Latest Lightning Card").font(.headline).fontWeight(.bold)
+                        .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
+                        .animation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true), value: isLighteningAnimating)
+                    Text("View Latest Lightening Card").font(.headline).fontWeight(.bold)
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)

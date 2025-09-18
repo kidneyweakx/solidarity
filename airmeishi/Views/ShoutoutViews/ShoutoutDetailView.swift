@@ -2,7 +2,7 @@
 //  ShoutoutDetailView.swift
 //  airmeishi
 //
-//  Lightning-themed detailed view for a specific user in the shoutout system
+//  Lightening-themed detailed view for a specific user in the shoutout system
 //
 
 import SwiftUI
@@ -11,7 +11,7 @@ struct ShoutoutDetailView: View {
     let user: ShoutoutUser
     @Environment(\.dismiss) private var dismiss
     @State private var showingCreateShoutout = false
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     
     var body: some View {
         NavigationView {
@@ -31,10 +31,10 @@ struct ShoutoutDetailView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Lightning header with profile
+                        // Lightening header with profile
                         lightningHeader
                         
-                        // Lightning stats grid
+                        // Lightening stats grid
                         lightningStatsGrid
                         
                         // User Information
@@ -43,13 +43,13 @@ struct ShoutoutDetailView: View {
                         // Tags and Skills
                         tagsSection
                         
-                        // Lightning Action Buttons
+                        // Lightening Action Buttons
                         lightningActionButtons
                     }
                     .padding()
                 }
             }
-            .navigationTitle("Lightning Profile")
+            .navigationTitle("Lightening Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -63,28 +63,28 @@ struct ShoutoutDetailView: View {
                 CreateShoutoutView(selectedUser: user)
             }
             .onAppear {
-                startLightningAnimation()
+                startLighteningAnimation()
             }
         }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Lightning Header
+    // MARK: - Lightening Header
     
     private var lightningHeader: some View {
         VStack(spacing: 20) {
-            // Lightning bolt and title
+            // Lightening bolt and title
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.yellow)
                     .font(.title)
-                    .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
                 
-                Text("Lightning Profile")
+                Text("Lightening Profile")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -94,7 +94,7 @@ struct ShoutoutDetailView: View {
             
             // Profile Image with lightning effects
             ZStack {
-                // Lightning ring
+                // Lightening ring
                 Circle()
                     .stroke(
                         LinearGradient(
@@ -105,10 +105,10 @@ struct ShoutoutDetailView: View {
                         lineWidth: 3
                     )
                     .frame(width: 120, height: 120)
-                    .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
                 
                 AsyncImage(url: user.profileImageURL) { image in
@@ -136,15 +136,15 @@ struct ShoutoutDetailView: View {
                 .overlay(
                     Circle()
                         .stroke(verificationColor, lineWidth: 3)
-                        .scaleEffect(isLightningAnimating ? 1.05 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.05 : 1.0)
                         .animation(
                             .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                 )
                 .shadow(
-                    color: isLightningAnimating ? .yellow.opacity(0.6) : verificationColor.opacity(0.5),
-                    radius: isLightningAnimating ? 15 : 8,
+                    color: isLighteningAnimating ? .yellow.opacity(0.6) : verificationColor.opacity(0.5),
+                    radius: isLighteningAnimating ? 15 : 8,
                     x: 0, y: 4
                 )
             }
@@ -182,10 +182,10 @@ struct ShoutoutDetailView: View {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.yellow)
                     .font(.caption)
-                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
             }
             .padding(.horizontal, 16)
@@ -201,12 +201,12 @@ struct ShoutoutDetailView: View {
         }
     }
     
-    // MARK: - Lightning Stats Grid
+    // MARK: - Lightening Stats Grid
     
     private var lightningStatsGrid: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Lightning Stats")
+                Text("Lightening Stats")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -216,10 +216,10 @@ struct ShoutoutDetailView: View {
                 Image(systemName: "bolt.circle.fill")
                     .foregroundColor(.yellow)
                     .font(.title2)
-                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                     .animation(
                         .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                        value: isLightningAnimating
+                        value: isLighteningAnimating
                     )
             }
             
@@ -227,36 +227,36 @@ struct ShoutoutDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 16) {
-                LightningStatCard(
+                LighteningStatCard(
                     title: "Activity",
                     value: String(format: "%.0f%%", user.eventScore * 100),
                     icon: "bolt.fill",
                     color: .yellow,
-                    isLightningAnimating: isLightningAnimating
+                    isLighteningAnimating: isLighteningAnimating
                 )
                 
-                LightningStatCard(
+                LighteningStatCard(
                     title: "Professional",
                     value: String(format: "%.0f%%", user.typeScore * 100),
                     icon: "briefcase.fill",
                     color: .blue,
-                    isLightningAnimating: isLightningAnimating
+                    isLighteningAnimating: isLighteningAnimating
                 )
                 
-                LightningStatCard(
+                LighteningStatCard(
                     title: "Character",
                     value: String(format: "%.0f%%", user.characterScore * 100),
                     icon: "person.fill",
                     color: .green,
-                    isLightningAnimating: isLightningAnimating
+                    isLighteningAnimating: isLighteningAnimating
                 )
                 
-                LightningStatCard(
+                LighteningStatCard(
                     title: "Verified",
                     value: user.verificationStatus.displayName,
                     icon: user.verificationStatus.systemImageName,
                     color: verificationColor,
-                    isLightningAnimating: isLightningAnimating
+                    isLighteningAnimating: isLighteningAnimating
                 )
             }
         }
@@ -334,22 +334,22 @@ struct ShoutoutDetailView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Lightning Action Buttons
+    // MARK: - Lightening Action Buttons
     
     private var lightningActionButtons: some View {
         VStack(spacing: 16) {
-            // Primary Lightning Shoutout Button
+            // Primary Lightening Shoutout Button
             Button(action: { showingCreateShoutout = true }) {
                 HStack(spacing: 12) {
                     Image(systemName: "bolt.fill")
                         .font(.title2)
-                        .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                        .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                         .animation(
                             .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                            value: isLightningAnimating
+                            value: isLighteningAnimating
                         )
                     
-                    Text("Send Lightning Shoutout")
+                    Text("Send Lightening Shoutout")
                         .font(.headline)
                         .fontWeight(.bold)
                 }
@@ -422,8 +422,8 @@ struct ShoutoutDetailView: View {
     
     // MARK: - Animation Control
     
-    private func startLightningAnimation() {
-        isLightningAnimating = true
+    private func startLighteningAnimation() {
+        isLighteningAnimating = true
     }
     
     // MARK: - Computed Properties
@@ -438,14 +438,14 @@ struct ShoutoutDetailView: View {
     }
 }
 
-// MARK: - Lightning Stat Card
+// MARK: - Lightening Stat Card
 
-struct LightningStatCard: View {
+struct LighteningStatCard: View {
     let title: String
     let value: String
     let icon: String
     let color: Color
-    let isLightningAnimating: Bool
+    let isLighteningAnimating: Bool
     
     var body: some View {
         VStack(spacing: 8) {
@@ -453,10 +453,10 @@ struct LightningStatCard: View {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundColor(color)
-                .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                 .animation(
                     .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                    value: isLightningAnimating
+                    value: isLighteningAnimating
                 )
             
             // Value

@@ -22,7 +22,7 @@ struct MatchingView: View {
 struct PeerDetailSheet: View {
     let peer: ProximityPeer
     @Environment(\.dismiss) private var dismiss
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     
     var body: some View {
         NavigationView {
@@ -36,15 +36,15 @@ struct PeerDetailSheet: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Lightning header
+                        // Lightening header
                         HStack {
                             Image(systemName: "bolt.fill")
                                 .foregroundColor(.yellow)
                                 .font(.title)
-                                .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                                .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                                 .animation(
                                     .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                                    value: isLightningAnimating
+                                    value: isLighteningAnimating
                                 )
                             
                             Text("Peer Details")
@@ -171,7 +171,7 @@ struct PeerDetailSheet: View {
                 }
             }
             .onAppear {
-                isLightningAnimating = true
+                isLighteningAnimating = true
             }
         }
         .preferredColorScheme(.dark)

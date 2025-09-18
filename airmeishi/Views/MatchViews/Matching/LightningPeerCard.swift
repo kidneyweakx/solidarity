@@ -1,5 +1,5 @@
 //
-//  LightningPeerCard.swift
+//  LighteningPeerCard.swift
 //  airmeishi
 //
 //  Card cell showing a peer with a styled Connect button.
@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct LightningPeerCard: View {
+struct LighteningPeerCard: View {
     let peer: ProximityPeer
-    let isLightningAnimating: Bool
+    let isLighteningAnimating: Bool
     let onTap: () -> Void
     let onConnect: (() -> Void)?
     
@@ -28,7 +28,7 @@ struct LightningPeerCard: View {
                     .fill(Color.white.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(isLightningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(isLighteningAnimating ? Color.yellow.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
                     )
             )
             .scaleEffect(isHovering ? 1.05 : 1.0)
@@ -49,16 +49,16 @@ struct LightningPeerCard: View {
                     Circle()
                         .stroke(Color.yellow, lineWidth: 2)
                         .frame(width: 56, height: 56)
-                        .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLightningAnimating)
+                        .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLighteningAnimating)
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 4) {
                     Circle().fill(statusColor).frame(width: 8, height: 8)
-                        .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLightningAnimating)
+                        .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isLighteningAnimating)
                     Text(peer.status.rawValue).font(.caption2).foregroundColor(.white)
                 }
                 if let verification = peer.verification {
@@ -114,10 +114,10 @@ struct LightningPeerCard: View {
             }
             Spacer()
             Image(systemName: "bolt.fill")
-                .foregroundColor(isLightningAnimating ? .yellow : .gray)
+                .foregroundColor(isLighteningAnimating ? .yellow : .gray)
                 .font(.caption)
-                .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
-                .animation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true), value: isLightningAnimating)
+                .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
+                .animation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true), value: isLighteningAnimating)
         }
     }
     
