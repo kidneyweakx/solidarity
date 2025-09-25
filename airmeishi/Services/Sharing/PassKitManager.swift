@@ -23,7 +23,9 @@ class PassKitManager: NSObject, ObservableObject {
     private let teamIdentifier = "5N42RJ485D"
     private let organizationName = "Airmeishi"
     
-    private let qrCodeManager = QRCodeManager.shared
+    // NOTE: We no longer embed a QR image into the pass bundle. The Wallet
+    // barcode payload will be a simple import string (name + job) that other
+    // apps can parse.
     
     private override init() {
         super.init()
@@ -46,22 +48,8 @@ class PassKitManager: NSObject, ObservableObject {
         // Create pass data structure
         let passData = createPassData(for: businessCard, sharingLevel: sharingLevel)
         
-        // Generate QR code for the pass
-        let qrResult = qrCodeManager.generateQRCode(
-            for: businessCard,
-            sharingLevel: sharingLevel,
-            expirationDate: Date().addingTimeInterval(365 * 24 * 60 * 60) // 1 year
-        )
-        
-        switch qrResult {
-        case .success(let qrImage):
-            // Create pass bundle
-            return createPassBundle(passData: passData, qrImage: qrImage, businessCard: businessCard)
-            
-        case .failure(let error):
-            passError = error
-            return .failure(error)
-        }
+        // Create pass bundle (simplified, unsigned)
+        return createPassBundle(passData: passData, businessCard: businessCard)
     }
     
     /// Add pass to Apple Wallet
@@ -129,6 +117,7 @@ class PassKitManager: NSObject, ObservableObject {
     ) -> [String: Any] {
         let filteredCard = businessCard.filteredCard(for: sharingLevel)
         let passSerial = UUID().uuidString
+        let importValue = generateImportString(for: filteredCard, sharingLevel: sharingLevel)
         
         var passData: [String: Any] = [
             "formatVersion": 1,
@@ -225,9 +214,9 @@ class PassKitManager: NSObject, ObservableObject {
         
         passData["generic"] = generic
         
-        // Add barcode/QR code placeholder (will be replaced with actual QR data)
+        // Add barcode/QR code payload: simple import string (name + job)
         passData["barcodes"] = [[
-            "message": "qr_placeholder",
+            "message": importValue,
             "format": "PKBarcodeFormatQR",
             "messageEncoding": "iso-8859-1"
         ]]
@@ -238,24 +227,14 @@ class PassKitManager: NSObject, ObservableObject {
     /// Create complete pass bundle with all required files
     private func createPassBundle(
         passData: [String: Any],
-        qrImage: UIImage,
         businessCard: BusinessCard
     ) -> CardResult<Data> {
         do {
             // Create pass.json
             _ = try JSONSerialization.data(withJSONObject: passData, options: .prettyPrinted)
             
-            // Update QR code in pass data
-            var updatedPassData = passData
-            if let qrData = qrImage.pngData()?.base64EncodedString() {
-                updatedPassData["barcodes"] = [[
-                    "message": qrData,
-                    "format": "PKBarcodeFormatQR",
-                    "messageEncoding": "iso-8859-1"
-                ]]
-            }
-            
-            let finalPassJsonData = try JSONSerialization.data(withJSONObject: updatedPassData, options: .prettyPrinted)
+            // Serialize final pass.json
+            let finalPassJsonData = try JSONSerialization.data(withJSONObject: passData, options: .prettyPrinted)
             
             // Create manifest.json (checksums of all files)
             var manifest: [String: String] = [:]
@@ -385,4 +364,22 @@ struct PassUpdatePayload: Codable {
     let updatedAt: Date
     let businessCard: BusinessCard
     let sharingLevel: SharingLevel
+}
+
+// MARK: - Public Helper (Import String)
+
+extension PassKitManager {
+    /// Generate a simple import URL string that contains the name and job title.
+    /// Example: airmeishi://contact?name=John%20Doe&job=Engineer
+    func generateImportString(for businessCard: BusinessCard, sharingLevel: SharingLevel) -> String {
+        let filtered = businessCard.filteredCard(for: sharingLevel)
+        let nameEncoded = urlEncode(filtered.name)
+        let titleEncoded = urlEncode(filtered.title ?? "")
+        return "airmeishi://contact?name=\(nameEncoded)&job=\(titleEncoded)"
+    }
+    
+    private func urlEncode(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
 }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PassKit
+import UIKit
 
 /// Apple Wallet pass generation and management view
 struct WalletPassGenerationView: View {
@@ -19,6 +20,7 @@ struct WalletPassGenerationView: View {
     @State private var generatedPKPass: PKPass?
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var importString: String = ""
     
     @Environment(\.dismiss) private var dismiss
     
@@ -60,6 +62,36 @@ struct WalletPassGenerationView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding()
+                    }
+                    
+                    // Import string (name + job) for external apps
+                    if !importString.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Import String")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text(importString)
+                                .font(.caption.monospaced())
+                                .textSelection(.enabled)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                            Button(action: copyImportString) {
+                                HStack {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copy Import String")
+                                }
+                                .font(.footnote)
+                                .foregroundColor(.blue)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
                     
                     // Action buttons
@@ -126,11 +158,17 @@ struct WalletPassGenerationView: View {
                 AddPassesControllerView(pass: pass)
             }
         }
+        .onAppear {
+            // Precompute import string so users can copy even before generating pass
+            importString = passKitManager.generateImportString(for: businessCard, sharingLevel: sharingLevel)
+        }
     }
     
     // MARK: - Private Methods
     
     private func generatePass() {
+        // Always compute import string alongside pass generation
+        importString = passKitManager.generateImportString(for: businessCard, sharingLevel: sharingLevel)
         let result = passKitManager.generatePass(
             for: businessCard,
             sharingLevel: sharingLevel
@@ -158,6 +196,10 @@ struct WalletPassGenerationView: View {
             errorMessage = error.localizedDescription
             showingError = true
         }
+    }
+
+    private func copyImportString() {
+        UIPasteboard.general.string = importString
     }
 }
 
