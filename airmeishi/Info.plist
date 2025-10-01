@@ -30,20 +30,7 @@
 			<key>CFBundleURLName</key>
 			<string>airmeishi.auth</string>
 		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>cbwallet</string>
-			</array>
-			<key>CFBundleURLName</key>
-			<string>coinbase.wallet</string>
-		</dict>
 	</array>
-    <key>LSApplicationQueriesSchemes</key>
-    <array>
-        <string>cbwallet</string>
-        <string>coinbasewallet</string>
-    </array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
