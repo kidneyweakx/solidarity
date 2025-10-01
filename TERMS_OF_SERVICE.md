@@ -1,8 +1,8 @@
 # Terms of Service for Solid(ar)ity
 
-**Last Updated:** [DATE]
+**Last Updated:** 2025.10.02
 
-**Effective Date:** [DATE]
+**Effective Date:** 2025.10.02
 
 ---
 
@@ -205,13 +205,13 @@ Upon termination:
 ## 12. Dispute Resolution
 
 ### 12.1 Governing Law
-These Terms shall be governed by and construed in accordance with the laws of **[YOUR JURISDICTION]**, without regard to conflict of law principles.
+These Terms shall be governed by and construed in accordance with the laws of **[Taiwan]**, without regard to conflict of law principles.
 
 ### 12.2 Arbitration (Optional)
 Any disputes arising from these Terms or your use of the App shall be resolved through:
 - Good-faith negotiation between the parties
 - [Optional: Binding arbitration in accordance with [ARBITRATION RULES]]
-- Litigation in the courts of [YOUR JURISDICTION] (if arbitration is not specified)
+- Litigation in the courts of [Taiwan] (if arbitration is not specified)
 
 ### 12.3 Class Action Waiver
 You agree to resolve disputes individually and waive the right to participate in class actions or class-wide arbitration.
@@ -274,6 +274,6 @@ By using Solid(ar)ity, you acknowledge that:
 
 ---
 
-**Last Updated:** [DATE]
+**Last Updated:** 2025.10.02
 
 **Solid(ar)ity** - Privacy-first networking for the decentralized web.

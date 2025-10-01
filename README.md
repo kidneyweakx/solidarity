@@ -53,9 +53,9 @@ To ship Solid(ar)ity to the App Store, here's what must be done:
 - [x] Proximity-based P2P sharing
 - [x] QR code generation and scanning
 - [x] Zero-knowledge proof integration
-- [x] Apple Wallet (PassKit) support
 - [x] Group management
 - [x] Local encrypted storage
+- [ ] Apple Wallet (PassKit) support - Moved to v1.1 (requires Pass Certificate)
 
 ### 2. **Privacy & Compliance** 🔴 CRITICAL
 - [ ] **Privacy Policy** - Required by App Store. Must explain:
@@ -188,13 +188,14 @@ Ship with:
 - ✓ Business card creation/editing
 - ✓ QR code sharing (fastest to demo)
 - ✓ Proximity sharing (P2P)
-- ✓ Apple Wallet integration (killer feature)
-- ✓ Basic groups (limit to 3 groups for free tier?)
+- ✓ Zero-knowledge identity (Semaphore)
+- ✓ Basic group management
 
-### Post-Launch Features
-- Advanced group management
-- ENS integration (most users won't use this v1)
-- Web3Auth (adds complexity, remove for v1 if optional)
+### Post-Launch Features (v1.1+)
+- **Apple Wallet integration** (requires Pass Type ID certificate setup)
+- Advanced selective disclosure
+- ENS integration
+- Shoutout features
 - Cross-platform (Android, web)
 
 ---

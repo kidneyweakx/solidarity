@@ -34,22 +34,43 @@ class PassKitManager: NSObject, ObservableObject {
     // MARK: - Pass Generation
     
     /// Generate Apple Wallet pass for business card
+    ///
+    /// NOTE: This feature requires a Pass Type ID certificate from your Apple Developer account.
+    /// To enable Apple Wallet passes:
+    /// 1. Create a Pass Type ID in Apple Developer Portal
+    /// 2. Generate and download Pass Certificate (.p12)
+    /// 3. Implement proper .pkpass signing (PKCS#7)
+    /// 4. Use a ZIP library to create the .pkpass bundle
+    ///
+    /// For v1.0, this feature is disabled to avoid crashes.
     func generatePass(
         for businessCard: BusinessCard,
         sharingLevel: SharingLevel = .professional
     ) -> CardResult<Data> {
+        isGeneratingPass = false
+        passError = .passGenerationError("Apple Wallet feature coming in v1.1")
+
+        // TODO v1.1: Implement proper .pkpass generation with certificate signing
+        return .failure(.passGenerationError(
+            "Apple Wallet passes require additional setup. " +
+            "This feature will be available in a future update. " +
+            "For now, you can share your card via QR code, AirDrop, or proximity sharing."
+        ))
+
+        /* DISABLED FOR v1.0 - Requires Apple Pass Certificate
         isGeneratingPass = true
         passError = nil
-        
+
         defer {
             isGeneratingPass = false
         }
-        
+
         // Create pass data structure
         let passData = createPassData(for: businessCard, sharingLevel: sharingLevel)
-        
+
         // Create pass bundle (simplified, unsigned)
         return createPassBundle(passData: passData, businessCard: businessCard)
+        */
     }
     
     /// Add pass to Apple Wallet

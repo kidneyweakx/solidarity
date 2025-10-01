@@ -1,6 +1,6 @@
 # Privacy Policy for Solid(ar)ity
 
-**Last Updated:** [DATE]
+**Last Updated:** 2025.10.02
 
 ## Introduction
 
