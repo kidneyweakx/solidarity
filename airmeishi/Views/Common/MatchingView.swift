@@ -167,7 +167,6 @@ struct PeerDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(.white)
                 }
             }
             .onAppear {

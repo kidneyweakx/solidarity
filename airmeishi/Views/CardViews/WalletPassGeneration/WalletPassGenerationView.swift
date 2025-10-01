@@ -103,10 +103,10 @@ struct WalletPassGenerationView: View {
                                     Text("Add to Apple Wallet")
                                 }
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.Theme.buttonText)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(Color.Theme.primaryAction)
                                 .cornerRadius(12)
                             }
                         } else {
@@ -116,10 +116,10 @@ struct WalletPassGenerationView: View {
                                     Text("Generate Pass")
                                 }
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.Theme.buttonText)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(Color.Theme.primaryAction)
                                 .cornerRadius(12)
                             }
                             .disabled(passKitManager.isGeneratingPass)

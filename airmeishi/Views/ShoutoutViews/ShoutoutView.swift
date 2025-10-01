@@ -47,7 +47,6 @@ struct ShoutoutView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingFilters.toggle() }) {
                         Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(.white)
                             .font(.title2)
                     }
                 }
@@ -431,7 +430,6 @@ struct CreateShoutoutView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.white)
                 }
             }
             .sheet(isPresented: $showingUserPicker) {
@@ -723,7 +721,6 @@ struct UserPickerView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.white)
                 }
             }
             .onAppear {

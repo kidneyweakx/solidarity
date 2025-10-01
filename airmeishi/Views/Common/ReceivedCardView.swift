@@ -237,7 +237,6 @@ struct ReceivedCardView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(.white)
                 }
             }
             .onAppear {

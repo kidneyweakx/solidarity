@@ -65,7 +65,7 @@ struct NearbyPeersSheet: View {
             }
             .navigationTitle("Lightening Peers")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() }.foregroundColor(.white) } }
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .onAppear { isLighteningAnimating = true }
             .sheet(isPresented: $showingPeerDetail) {
                 if let peer = selectedPeer { PeerDetailSheet(peer: peer) }

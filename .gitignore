@@ -92,3 +92,8 @@ xcuserdata
 
 
 # End of https://www.toptal.com/developers/gitignore/api/swift,swiftpackagemanager
+
+# Certificates and keys
+*.p12
+*.cer
+*.certSigningRequest

@@ -58,13 +58,13 @@ To ship Solid(ar)ity to the App Store, here's what must be done:
 - [ ] Apple Wallet (PassKit) support - Moved to v1.1 (requires Pass Certificate)
 
 ### 2. **Privacy & Compliance** 🔴 CRITICAL
-- [ ] **Privacy Policy** - Required by App Store. Must explain:
-  - What data is collected (even if minimal)
-  - How ZK proofs work without exposing identity
+- [x] **Privacy Policy** - ✅ Created (`PRIVACY_POLICY.md`) - Needs web hosting
+  - Explains zero data collection
+  - ZK proofs without exposing identity
   - Local-only storage policy
   - No third-party data sharing
-- [ ] **Terms of Service** - Standard legal protection
-- [ ] **Privacy Manifest** (`PrivacyInfo.xcprivacy`) - Required for API usage disclosure
+- [x] **Terms of Service** - ✅ Created (`TERMS_OF_SERVICE.md`)
+- [x] **Privacy Manifest** (`PrivacyInfo.xcprivacy`) - ✅ Created (needs to be added to Xcode project target)
 - [ ] **App Store Privacy Labels** - Fill out accurately in App Store Connect
 - [ ] Review **Info.plist** permission strings:
   - `NSLocalNetworkUsageDescription` ✓
@@ -100,7 +100,7 @@ To ship Solid(ar)ity to the App Store, here's what must be done:
 - [ ] **Dark mode** - Full support for light and dark themes
 
 ### 5. **Technical Requirements** 🔴 CRITICAL
-- [ ] **Deployment target**: Set to iOS 16.0 minimum (not 18.5) for broader reach
+- [x] **Deployment target**: ✅ Set to iOS 16.0 (was 18.5)
 - [ ] **Code signing**: Valid Apple Developer account
 - [ ] **App ID & Provisioning**: Proper configuration
 - [ ] **Entitlements**:
@@ -112,12 +112,12 @@ To ship Solid(ar)ity to the App Store, here's what must be done:
   - ✓ Mopro (active)
   - 🟡 Web3Auth (verify license compliance)
   - 🟡 Web3.swift (verify license compliance)
-- [ ] **Remove backend references**:
-  - Delete `APIClient.swift`
-  - Delete `APIAuthManager.swift`
-  - Delete `APIConfig.swift`
-  - Delete `APIModels.swift`
-  - Remove from CLAUDE.md documentation
+- [x] **Remove backend references**:
+  - ✅ Deleted `APIClient.swift`
+  - ✅ Deleted `APIAuthManager.swift`
+  - ✅ Deleted `APIConfig.swift`
+  - ✅ Deleted `APIModels.swift`
+  - ✅ Removed from CLAUDE.md documentation
 
 ### 6. **User Experience Polish** 🟡 IMPORTANT
 - [ ] **Onboarding** - First-time user tutorial (keep it < 3 screens)
@@ -192,10 +192,10 @@ Ship with:
 - ✓ Basic group management
 
 ### Post-Launch Features (v1.1+)
-- **Apple Wallet integration** (requires Pass Type ID certificate setup)
+- **Apple Wallet signing** (implementation complete, needs Pass Type ID certificate - see `PASSKIT_CERTIFICATE_SETUP.md`)
 - Advanced selective disclosure
 - ENS integration
-- Shoutout features
+- Shoutout features completion
 - Cross-platform (Android, web)
 
 ---
