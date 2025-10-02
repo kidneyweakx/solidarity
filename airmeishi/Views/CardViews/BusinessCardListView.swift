@@ -462,15 +462,49 @@ private struct CategoryTag: View {
 private struct EmptyWalletView: View {
     let onCreate: () -> Void
     let onScan: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "person.crop.rectangle").font(.system(size: 64)).foregroundColor(.secondary)
-            Text("Business Card Not Found").font(.title2).bold().foregroundColor(.primary)
-            Text("Add a card or scan to get started").foregroundColor(.secondary)
+            Image(systemName: "person.crop.rectangle")
+                .font(.system(size: 64))
+                .foregroundColor(.white.opacity(0.3))
+
+            Text("Business Card Not Found")
+                .font(.title2)
+                .bold()
+                .foregroundColor(.white)
+
+            Text("Add a card or scan to get started")
+                .foregroundColor(.white.opacity(0.6))
+
             HStack(spacing: 12) {
-                Button("Add Card", action: onCreate).buttonStyle(.borderedProminent)
-                Button("Scan Card", action: onScan).buttonStyle(.bordered).foregroundColor(.gray)
+                Button(action: onCreate) {
+                    Text("Add Card")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.black)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                Button(action: onScan) {
+                    Text("Scan Card")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.white.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
             }
         }
         .padding()

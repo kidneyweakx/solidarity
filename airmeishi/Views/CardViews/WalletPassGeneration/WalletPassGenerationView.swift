@@ -20,7 +20,9 @@ struct WalletPassGenerationView: View {
     @State private var generatedPKPass: PKPass?
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var errorDetail = ""
     @State private var importString: String = ""
+    @State private var showCopiedFeedback = false
     
     @Environment(\.dismiss) private var dismiss
     
@@ -66,25 +68,35 @@ struct WalletPassGenerationView: View {
                     
                     // Import string (name + job) for external apps
                     if !importString.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Import String")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Import String")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text("Deep link for importing contact data")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
                             Text(importString)
                                 .font(.caption.monospaced())
                                 .textSelection(.enabled)
                                 .lineLimit(3)
                                 .multilineTextAlignment(.leading)
+                                .padding(8)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(6)
+
                             Button(action: copyImportString) {
                                 HStack {
                                     Image(systemName: "doc.on.doc")
                                     Text("Copy Import String")
                                 }
-                                .font(.footnote)
-                                .foregroundColor(.blue)
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 10)
-                                .background(Color(.systemGray6))
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.systemGray5))
                                 .cornerRadius(8)
                             }
                         }
@@ -103,10 +115,10 @@ struct WalletPassGenerationView: View {
                                     Text("Add to Apple Wallet")
                                 }
                                 .font(.headline)
-                                .foregroundColor(Color.Theme.buttonText)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.Theme.primaryAction)
+                                .background(Color(.systemGray5))
                                 .cornerRadius(12)
                             }
                         } else {
@@ -116,15 +128,15 @@ struct WalletPassGenerationView: View {
                                     Text("Generate Pass")
                                 }
                                 .font(.headline)
-                                .foregroundColor(Color.Theme.buttonText)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.Theme.primaryAction)
+                                .background(passKitManager.isGeneratingPass ? Color(.systemGray6) : Color(.systemGray5))
                                 .cornerRadius(12)
                             }
                             .disabled(passKitManager.isGeneratingPass)
                         }
-                        
+
                         Button("Cancel") {
                             dismiss()
                         }
@@ -148,11 +160,41 @@ struct WalletPassGenerationView: View {
                 }
             }
         }
-        .alert("Error", isPresented: $showingError) {
-            Button("OK") { }
+        .alert("Unable to Create Pass", isPresented: $showingError) {
+            Button("OK") {
+                errorMessage = ""
+                errorDetail = ""
+            }
         } message: {
-            Text(errorMessage)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(errorMessage)
+                if !errorDetail.isEmpty {
+                    Text(errorDetail)
+                        .font(.caption)
+                }
+            }
         }
+        .overlay(
+            Group {
+                if showCopiedFeedback {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Copied to clipboard")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(10)
+                        .padding(.bottom, 50)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut, value: showCopiedFeedback)
+                }
+            }
+        )
         .sheet(isPresented: $showingAddToWallet) {
             if let pass = generatedPKPass {
                 AddPassesControllerView(pass: pass)
@@ -173,33 +215,63 @@ struct WalletPassGenerationView: View {
             for: businessCard,
             sharingLevel: sharingLevel
         )
-        
+
         switch result {
         case .success(let passData):
             generatedPassData = passData
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            // Parse error for better UX
+            let errorDesc = error.localizedDescription
+            if errorDesc.contains("certificate") || errorDesc.contains("trust chain") {
+                errorMessage = "Certificate verification failed"
+                errorDetail = "The pass signature could not be verified. Please check the server-side certificate configuration."
+            } else if errorDesc.contains("Server") || errorDesc.contains("network") {
+                errorMessage = "Network error"
+                errorDetail = "Unable to connect to signing service. Please check your internet connection."
+            } else {
+                errorMessage = errorDesc
+                errorDetail = ""
+            }
             showingError = true
         }
     }
     
     private func addToWallet() {
         guard let passData = generatedPassData else { return }
-        
+
         let result = passKitManager.addPassToWallet(passData)
-        
+
         switch result {
         case .success:
             generatedPKPass = passKitManager.lastGeneratedPass
             showingAddToWallet = generatedPKPass != nil
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            // Parse error for better UX
+            let errorDesc = error.localizedDescription
+            if errorDesc.contains("certificate") || errorDesc.contains("trust chain") || errorDesc.contains("passTypeIdentifier") || errorDesc.contains("teamIdentifier") {
+                errorMessage = "Pass verification failed"
+                errorDetail = "Apple Wallet could not verify this pass. The certificate may not match the Pass Type ID or Team ID in the pass data."
+            } else if errorDesc.contains("already exists") {
+                errorMessage = "Pass already in Wallet"
+                errorDetail = "This business card pass has already been added to your Apple Wallet."
+            } else {
+                errorMessage = errorDesc
+                errorDetail = ""
+            }
             showingError = true
         }
     }
 
     private func copyImportString() {
         UIPasteboard.general.string = importString
+
+        // Show feedback
+        showCopiedFeedback = true
+
+        // Hide after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showCopiedFeedback = false
+        }
     }
 }
 

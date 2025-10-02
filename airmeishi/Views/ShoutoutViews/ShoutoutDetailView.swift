@@ -12,6 +12,7 @@ struct ShoutoutDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingCreateShoutout = false
     @State private var isLighteningAnimating = false
+    @State private var showingDeleteConfirm = false
     
     var body: some View {
         NavigationView {
@@ -61,6 +62,14 @@ struct ShoutoutDetailView: View {
             }
             .sheet(isPresented: $showingCreateShoutout) {
                 CreateShoutoutView(selectedUser: user)
+            }
+            .alert("Delete Contact?", isPresented: $showingDeleteConfirm) {
+                Button("Delete", role: .destructive) {
+                    deleteContact()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete \(user.name)? This action cannot be undone.")
             }
             .onAppear {
                 startLighteningAnimation()
@@ -393,7 +402,7 @@ struct ShoutoutDetailView: View {
                             )
                     )
                 }
-                
+
                 Button(action: {
                     // TODO: Implement share action
                 }) {
@@ -417,13 +426,49 @@ struct ShoutoutDetailView: View {
                     )
                 }
             }
+
+            // Delete Button
+            Button(action: {
+                showingDeleteConfirm = true
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "trash")
+                        .font(.title3)
+                    Text("Delete Contact")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.red.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
         }
     }
     
     // MARK: - Animation Control
-    
+
     private func startLighteningAnimation() {
         isLighteningAnimating = true
+    }
+
+    // MARK: - Actions
+
+    private func deleteContact() {
+        let result = ContactRepository.shared.deleteContact(id: user.id)
+        switch result {
+        case .success:
+            dismiss()
+        case .failure(let error):
+            print("Failed to delete contact: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Computed Properties

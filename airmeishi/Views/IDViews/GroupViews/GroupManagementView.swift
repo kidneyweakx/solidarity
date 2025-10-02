@@ -33,107 +33,53 @@ struct GroupManagementView: View {
 
     var body: some View {
         ZStack {
-            // Animated gradient background
+            // Simple gradient background
             LinearGradient(
                 colors: [
-                    Color(red: 0.1, green: 0.1, blue: 0.2),
-                    Color(red: 0.2, green: 0.1, blue: 0.3),
-                    Color(red: 0.1, green: 0.2, blue: 0.3)
+                    Color(red: 0.05, green: 0.05, blue: 0.08),
+                    Color(red: 0.08, green: 0.08, blue: 0.12)
                 ],
-                startPoint: isAnimating ? .topLeading : .bottomLeading,
-                endPoint: isAnimating ? .bottomTrailing : .topTrailing
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: isAnimating)
-
-            // Floating orbs for depth
-            GeometryReader { geometry in
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.blue.opacity(0.3), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
-                    )
-                    .frame(width: 400, height: 400)
-                    .offset(x: -100, y: isAnimating ? -50 : 50)
-                    .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: isAnimating)
-
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.purple.opacity(0.3), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
-                    )
-                    .frame(width: 300, height: 300)
-                    .offset(x: geometry.size.width - 150, y: isAnimating ? geometry.size.height - 100 : geometry.size.height - 200)
-                    .animation(.easeInOut(duration: 7).repeatForever(autoreverses: true), value: isAnimating)
-            }
 
             VStack(spacing: 0) {
-                // Enhanced Header Section with glassmorphism
+                // Header Section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 16) {
-                        // Icon with gradient
+                        // Simple icon
                         ZStack {
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.purple],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 60, height: 60)
-                                .shadow(color: Color.blue.opacity(0.5), radius: 15, x: 0, y: 5)
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 50, height: 50)
 
                             Image(systemName: "person.3.sequence.fill")
-                                .font(.system(size: 28))
+                                .font(.system(size: 24))
                                 .foregroundColor(.white)
                         }
-                        .scaleEffect(isAnimating ? 1.05 : 1.0)
-                        .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: isAnimating)
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Group Management")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.white, Color.blue.opacity(0.8)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
 
                             Text("Manage your groups and members")
                                 .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.7))
+                                .foregroundColor(.white.opacity(0.6))
                         }
 
                         Spacer()
                     }
-                    .padding(24)
+                    .padding(20)
                 }
                 .background(
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(Color.white.opacity(0.1))
-                        .background(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
                         )
-                        .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -142,46 +88,35 @@ struct GroupManagementView: View {
                 // Main Actions Section with enhanced cards
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Group Actions with glass card
+                        // Group Actions
                         VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Group Actions")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-
-                                Spacer()
-
-                                Image(systemName: "sparkles")
-                                    .foregroundColor(.yellow)
-                                    .font(.title3)
-                                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                                    .animation(.linear(duration: 10).repeatForever(autoreverses: false), value: isAnimating)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.top, 8)
+                            Text("Group Actions")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
 
                             VStack(spacing: 1) {
-                                EnhancedNodeRow(icon: "checkmark.seal", title: "View Root", subtitle: "Manage group root and identity", gradientColors: [.blue, .cyan]) { activeSheet = .root }
-                                EnhancedNodeRow(icon: "person.badge.plus", title: "Add Member", subtitle: "Add new members to your group", gradientColors: [.green, .mint]) { activeSheet = .add }
-                                EnhancedNodeRow(icon: "person.badge.minus", title: "Remove Member", subtitle: "Revoke member access", gradientColors: [.orange, .yellow]) { activeSheet = .revoke }
-                                EnhancedNodeRow(icon: "sparkles", title: "ENS Mode", subtitle: "Upgrade or bind to ENS", gradientColors: [.purple, .pink]) { activeSheet = .ens }
-                                EnhancedDangerNodeRow(icon: "trash", title: "Delete Group", subtitle: "Remove group and its card") { showDeleteConfirm = true }
+                                SimpleNodeRow(icon: "checkmark.seal", title: "View Root", subtitle: "Manage group root and identity") { activeSheet = .root }
+                                SimpleNodeRow(icon: "person.badge.plus", title: "Add Member", subtitle: "Add new members to your group") { activeSheet = .add }
+                                SimpleNodeRow(icon: "person.badge.minus", title: "Remove Member", subtitle: "Revoke member access") { activeSheet = .revoke }
+                                SimpleNodeRow(icon: "sparkles", title: "ENS Mode", subtitle: "Upgrade or bind to ENS") { activeSheet = .ens }
+                                SimpleDangerNodeRow(icon: "trash", title: "Delete Group", subtitle: "Remove group and its card") { showDeleteConfirm = true }
                             }
                         }
                         .padding(4)
                         .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color.white.opacity(0.08))
-                                .background(
-                                    RoundedRectangle(cornerRadius: 24)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.06))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                                 )
-                                .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
                         )
                         .padding(.horizontal, 20)
 
-                        // Enhanced Premium Features
+                        // Premium Features
                         VStack(alignment: .leading, spacing: 16) {
                             HStack {
                                 Text("Premium Features")
@@ -192,13 +127,13 @@ struct GroupManagementView: View {
                                 Spacer()
 
                                 Image(systemName: "crown.fill")
-                                    .foregroundColor(.yellow)
+                                    .foregroundColor(.white.opacity(0.5))
                                     .font(.title3)
                             }
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 20)
                             .padding(.top, 8)
 
-                            EnhancedPremiumFeatureRow(
+                            SimplePremiumFeatureRow(
                                 icon: "plus.circle.fill",
                                 title: "Create Group with ENS",
                                 subtitle: "Create groups with custom ENS domains",
@@ -208,19 +143,12 @@ struct GroupManagementView: View {
                         }
                         .padding(4)
                         .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.yellow.opacity(0.15), Color.orange.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                                 )
-                                .background(
-                                    RoundedRectangle(cornerRadius: 24)
-                                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
-                                )
-                                .shadow(color: Color.yellow.opacity(0.3), radius: 20, x: 0, y: 10)
                         )
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
@@ -1039,7 +967,7 @@ struct GroupManagementView: View {
                             .padding(.horizontal, 20)
 
                         VStack(spacing: 12) {
-                            EnhancedPremiumFeatureRow(
+                            SimplePremiumFeatureRow(
                                 icon: "sparkles",
                                 title: "Upgrade to ENS Mode",
                                 subtitle: "Advanced features backed by ENS",
@@ -1124,337 +1052,165 @@ struct GroupManagementView: View {
     NavigationView { GroupManagementView() }
 }
 
-// MARK: - Enhanced UI Components
+// MARK: - Simple UI Components
 
-private struct EnhancedNodeRow: View {
+private struct SimpleNodeRow: View {
     let icon: String
     let title: String
     let subtitle: String
-    let gradientColors: [Color]
     let action: () -> Void
 
-    @State private var isPressed = false
-    @State private var isHovered = false
-
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
-            }
-            action()
-        }) {
+        Button(action: action) {
             HStack(alignment: .center, spacing: 16) {
-                // Enhanced icon with gradient background
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: gradientColors.map { $0.opacity(0.3) },
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 56, height: 56)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: gradientColors.map { $0.opacity(0.5) },
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 2
-                                )
-                        )
-                        .shadow(color: gradientColors.first?.opacity(0.3) ?? Color.clear, radius: 10, x: 0, y: 5)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: icon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: gradientColors,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.white)
                 }
-                .scaleEffect(isPressed ? 0.95 : (isHovered ? 1.05 : 1.0))
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                         .foregroundColor(.white)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.5))
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: gradientColors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .opacity(isHovered ? 1.0 : 0.6)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.4))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(isHovered ? 0.12 : 0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.05))
             )
             .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
+            .padding(.vertical, 2)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
 }
 
-private struct EnhancedPremiumFeatureRow: View {
+private struct SimplePremiumFeatureRow: View {
     let icon: String
     let title: String
     let subtitle: String
     let price: String
     let isEnabled: Bool
 
-    @State private var shimmerOffset: CGFloat = -200
-
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Premium icon with crown effect
             ZStack {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.yellow.opacity(0.4), Color.orange.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 64, height: 64)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.yellow.opacity(0.6), Color.orange.opacity(0.4)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2
-                            )
-                    )
-                    .shadow(color: Color.yellow.opacity(0.4), radius: 15, x: 0, y: 5)
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.12))
+                    .frame(width: 50, height: 50)
 
                 Image(systemName: icon)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.yellow, Color.orange],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                // Shimmer effect for premium
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.clear, Color.white.opacity(0.3), Color.clear],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: 80)
-                    .offset(x: shimmerOffset)
-                    .mask(RoundedRectangle(cornerRadius: 18))
-            }
-            .onAppear {
-                withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
-                    shimmerOffset = 200
-                }
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(.white)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-
-                    Image(systemName: "crown.fill")
-                        .font(.caption)
-                        .foregroundColor(.yellow)
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.white.opacity(0.5))
                     .lineLimit(2)
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 2) {
                 Text(price)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.yellow, Color.orange],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
 
                 Text("Premium")
                     .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white.opacity(0.6))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.yellow.opacity(0.2))
-                    )
+                    .foregroundColor(.white.opacity(0.5))
             }
         }
-        .padding(20)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.15), Color.white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.08))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
-                .shadow(color: Color.yellow.opacity(0.2), radius: 15, x: 0, y: 8)
         )
         .padding(.horizontal, 12)
         .opacity(isEnabled ? 1.0 : 0.6)
     }
 }
 
-private struct EnhancedDangerNodeRow: View {
+private struct SimpleDangerNodeRow: View {
     let icon: String
     let title: String
     let subtitle: String
     let action: () -> Void
 
-    @State private var isPressed = false
-    @State private var isHovered = false
-    @State private var warningPulse = false
-
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
-            }
-            action()
-        }) {
+        Button(action: action) {
             HStack(alignment: .center, spacing: 16) {
-                // Danger icon with warning animation
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.red.opacity(0.3), Color.pink.opacity(0.2)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 56, height: 56)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.red.opacity(warningPulse ? 0.6 : 0.3), lineWidth: 2)
-                                .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: warningPulse)
-                        )
-                        .shadow(color: Color.red.opacity(0.3), radius: 10, x: 0, y: 5)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.red.opacity(0.15))
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: icon)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(.red)
-                }
-                .scaleEffect(isPressed ? 0.95 : (isHovered ? 1.05 : 1.0))
-                .onAppear {
-                    warningPulse = true
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(title)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.red)
-
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.red)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.5))
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.red)
-                    .opacity(isHovered ? 1.0 : 0.6)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.red.opacity(0.6))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.red.opacity(isHovered ? 0.12 : 0.08))
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.red.opacity(0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.red.opacity(0.15), lineWidth: 1)
                     )
             )
             .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
+            .padding(.vertical, 2)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
 }
 
