@@ -1,8 +1,8 @@
 # Terms of Service for Solid(ar)ity
 
-**Last Updated:** 2025.10.02
+**Last Updated:** 2025-01-15
 
-**Effective Date:** 2025.10.02
+**Effective Date:** 2025-01-15
 
 ---
 
@@ -120,11 +120,18 @@ The App integrates with Apple's native iOS frameworks:
 Your use of these Apple services is subject to Apple's terms and conditions.
 
 ### 7.2 Open-Source Libraries
-The App uses the following open-source libraries:
-- **SemaphoreSwift** (https://github.com/zkmopro/SemaphoreSwift)
-- **Mopro** (https://zkmopro.org/)
+The App uses the following open-source libraries for on-device computation:
+- **SemaphoreSwift** (https://github.com/zkmopro/SemaphoreSwift) - Zero-knowledge proof generation
+- **Mopro** (https://zkmopro.org/) - Mobile ZK proof optimization
 
-These libraries are subject to their respective open-source licenses.
+These libraries operate entirely on your device and do not transmit data. They are subject to their respective open-source licenses.
+
+### 7.3 No Third-Party Services
+The App does NOT integrate with:
+- Analytics or tracking services
+- Advertising networks
+- Cloud databases or authentication providers
+- Cryptocurrency wallets or blockchain services (other than ENS name resolution, if enabled)
 
 ---
 
@@ -152,11 +159,27 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR:
 
 **Maximum Liability:** Our total liability for any claims arising from your use of the App shall not exceed the amount you paid to download the App (if applicable), or $10 USD, whichever is greater.
 
-### 8.4 Cryptographic Security
-While we implement industry-standard cryptographic security (AES-GCM, Semaphore protocol):
-- No security system is completely impenetrable
-- You are responsible for maintaining the security of your iOS device
-- We are not liable for security breaches caused by device compromise, jailbreaking, or user error
+### 8.4 Zero-Knowledge Proofs and Cryptography
+The App implements advanced cryptographic features:
+
+**Zero-Knowledge Proof Technology:**
+- Uses Semaphore protocol for privacy-preserving group verification
+- Proofs are generated on-device using Mopro framework
+- ZK technology is provided for privacy enhancement, not absolute security
+
+**Important Disclaimers:**
+- No cryptographic system is completely impenetrable
+- You are responsible for maintaining the security of your iOS device and private keys
+- We are not liable for:
+  - Loss of ZK identity keys stored in Keychain
+  - Security breaches caused by device compromise or jailbreaking
+  - Misuse of ZK proofs or group membership claims
+  - Unauthorized access due to weak device security
+
+**Cryptography Compliance:**
+- All cryptography is used for privacy and security purposes only
+- NOT used for financial transactions or cryptocurrency trading
+- Compliant with export control regulations and iOS App Store guidelines
 
 ---
 

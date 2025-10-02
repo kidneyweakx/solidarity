@@ -27,7 +27,7 @@ struct GroupManagementView: View {
     @Environment(\.dismiss) private var dismiss
 
     private enum SheetType: String, Identifiable {
-        case root, add, revoke, ens
+        case root, add, revoke, ens, privacy, terms
         var id: String { rawValue }
     }
 
@@ -151,6 +151,31 @@ struct GroupManagementView: View {
                                 )
                         )
                         .padding(.horizontal, 20)
+
+                        // Legal & Privacy
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Legal & Privacy")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+
+                            VStack(spacing: 1) {
+                                SimpleNodeRow(icon: "hand.raised", title: "Privacy Policy", subtitle: "View our privacy policy") { activeSheet = .privacy }
+                                SimpleNodeRow(icon: "doc.text", title: "Terms of Service", subtitle: "View terms of service") { activeSheet = .terms }
+                            }
+                        }
+                        .padding(4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.06))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                )
+                        )
+                        .padding(.horizontal, 20)
                         .padding(.bottom, 40)
                     }
                 }
@@ -202,6 +227,10 @@ struct GroupManagementView: View {
                 RevokeMemberSheet
             case .ens:
                 ENSSheet
+            case .privacy:
+                PrivacySheet
+            case .terms:
+                TermsSheet
             }
         }
         .alert("Add Member Failed", isPresented: $showAddMemberError) {
@@ -351,9 +380,9 @@ struct GroupManagementView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.Theme.primaryAction)
+                                            .fill(Color.blue)
                                     )
-                                    .foregroundColor(Color.Theme.buttonText)
+                                    .foregroundColor(.white)
                                 }
                                 
                                 Button(action: { copyRoot() }) {
@@ -444,9 +473,9 @@ struct GroupManagementView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.Theme.primaryAction)
+                                            .fill(Color.blue)
                                     )
-                                    .foregroundColor(Color.Theme.buttonText)
+                                    .foregroundColor(.white)
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -621,7 +650,7 @@ struct GroupManagementView: View {
                                     if isAddingMember {
                                         ProgressView()
                                             .controlSize(.small)
-                                            .foregroundColor(Color.Theme.buttonText)
+                                            .tint(.white)
                                     } else {
                                         Image(systemName: "person.badge.plus")
                                     }
@@ -631,9 +660,9 @@ struct GroupManagementView: View {
                                 .padding(.vertical, 12)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.Theme.primaryAction)
+                                        .fill(Color.blue)
                                 )
-                                .foregroundColor(Color.Theme.buttonText)
+                                .foregroundColor(.white)
                             }
                             .disabled(isAddingMember || newMemberCommitment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .padding(.horizontal, 20)
@@ -693,9 +722,9 @@ struct GroupManagementView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             RoundedRectangle(cornerRadius: 6)
-                                                .fill(proximity.isBrowsing ? Color.Theme.danger : Color.Theme.primaryAction)
+                                                .fill(proximity.isBrowsing ? Color.red : Color.blue)
                                         )
-                                        .foregroundColor(Color.Theme.buttonText)
+                                        .foregroundColor(.white)
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -776,11 +805,11 @@ struct GroupManagementView: View {
                                                     }) {
                                         Image(systemName: "paperplane.fill")
                                                             .font(.system(size: 16, weight: .medium))
-                                                            .foregroundColor(Color.Theme.buttonText)
+                                                            .foregroundColor(.white)
                                                             .padding(8)
                                                             .background(
                                                                 Circle()
-                                                                    .fill(Color.Theme.primaryAction)
+                                                                    .fill(Color.blue)
                                                             )
                                                     }
                                                 }
@@ -903,11 +932,11 @@ struct GroupManagementView: View {
                                         Button(action: { group.removeMember(member) }) {
                                             Image(systemName: "trash")
                                                 .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(Color.Theme.buttonText)
+                                                .foregroundColor(.white)
                                                 .padding(8)
                                                 .background(
                                                     Circle()
-                                                        .fill(Color.Theme.danger)
+                                                        .fill(Color.red)
                                                 )
                                         }
                                     }
@@ -1013,9 +1042,9 @@ struct GroupManagementView: View {
                                 .padding(.vertical, 12)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.Theme.primaryAction)
+                                        .fill(Color.blue)
                                 )
-                                .foregroundColor(Color.Theme.buttonText)
+                                .foregroundColor(.white)
                             }
                             .disabled(ensName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .padding(.horizontal, 20)
@@ -1045,6 +1074,286 @@ struct GroupManagementView: View {
                 }
             }
         }
+    }
+
+    private var PrivacySheet: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(privacyPolicyText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+
+                    Spacer(minLength: 40)
+                }
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Privacy Policy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { activeSheet = nil }
+                }
+            }
+        }
+    }
+
+    private var TermsSheet: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(termsOfServiceText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+
+                    Spacer(minLength: 40)
+                }
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Terms of Service")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { activeSheet = nil }
+                }
+            }
+        }
+    }
+
+    private var privacyPolicyText: String {
+        """
+        Privacy Policy for Solid(ar)ity
+
+        Last Updated: 2025-01-15
+
+        CORE PRINCIPLE
+        Your data belongs to you. Everything stays on your device. We operate with zero servers and zero data collection.
+
+        ZERO DATA COLLECTION
+        We do NOT collect:
+        • Personal information
+        • Usage analytics or tracking data
+        • Device identifiers
+        • Contact lists
+        • Location data
+
+        LOCAL DATA STORAGE
+        All data is stored encrypted on YOUR device:
+        • Business cards (AES-GCM encryption)
+        • Received contacts (encrypted local storage)
+        • ZK identity keys (iOS Keychain, hardware-backed)
+        • Group memberships (local encrypted files)
+
+        ZERO-KNOWLEDGE PROOFS
+        Advanced privacy technology:
+
+        What is ZK?
+        Cryptographic proofs that verify claims without revealing your identity.
+
+        Example: Prove "I'm a conference attendee" without disclosing which attendee.
+
+        How it works:
+        1. Identity Generation: Created locally on your device
+        2. Group Membership: Join groups (e.g., "Company Employees")
+        3. Privacy-Preserving Proofs: Verify membership without exposing identity
+
+        Technology Stack:
+        • Semaphore Protocol: Industry-standard ZK protocol
+        • Mopro Framework: Mobile ZK proof generation
+        • iOS Keychain: Hardware-backed key storage
+
+        Privacy Guarantees:
+        • Anonymity: Identity within groups is protected
+        • Unlinkability: Proofs cannot be linked to you
+        • Local Computation: All proofs generated on-device
+        • No Server Dependency: Works completely offline
+
+        PEER-TO-PEER SHARING
+        Direct device-to-device sharing:
+        • MultipeerConnectivity: Local WiFi/Bluetooth only
+        • QR Codes: Data encoded locally
+        • AirDrop: Standard iOS sharing
+        • Apple Wallet: PassKit integration (data stays local)
+
+        SELECTIVE DISCLOSURE
+        Control what you share:
+        • Public: Minimal info (name, title)
+        • Professional: Work-related info
+        • Personal: Full contact details
+
+        WHAT WE DON'T USE
+        ❌ No analytics services
+        ❌ No advertising networks
+        ❌ No tracking SDKs
+        ❌ No cloud databases
+        ❌ No authentication providers
+        ❌ No crash reporting services
+
+        CRYPTOGRAPHY COMPLIANCE
+        Encryption used for privacy and security ONLY:
+        • Local data protection (AES-GCM)
+        • P2P communication security (Apple frameworks)
+        • ZK proof generation (Semaphore protocol)
+        • NOT used for financial transactions
+        • NOT cryptocurrency-related
+
+        YOUR RIGHTS
+        • Access all your data anytime
+        • Edit or delete information
+        • Export your data
+        • Full control over sharing
+
+        OPEN SOURCE
+        Verify our privacy claims:
+        https://github.com/kidneyweakx/solidarity
+
+        CONTACT
+        Questions? Create an issue:
+        https://github.com/kidneyweakx/solidarity/issues
+
+        Bottom Line: Your data stays on your device. Period.
+        """
+    }
+
+    private var termsOfServiceText: String {
+        """
+        Terms of Service for Solid(ar)ity
+
+        Last Updated: 2025-01-15
+
+        1. ACCEPTANCE OF TERMS
+        By using Solid(ar)ity, you agree to these Terms. If you don't agree, please don't use the App.
+
+        2. WHAT IS SOLID(AR)ITY?
+        A privacy-first business card sharing app that:
+        • Operates completely offline (no servers)
+        • Stores all data locally on your device
+        • Uses Zero-Knowledge proofs for privacy
+        • Enables P2P contact sharing
+        • Requires no account or registration
+
+        3. YOUR RESPONSIBILITIES
+        You agree to:
+        • Provide accurate information in your business cards
+        • Use the App lawfully and respectfully
+        • Not spam, harass, or harm others
+        • Maintain your device's security
+        • Not reverse engineer the App
+        • Not share others' info without permission
+
+        4. PRIVACY & DATA
+        • All data stored locally on YOUR device
+        • YOU control what information to share
+        • Zero-Knowledge proofs generated on-device
+        • No data collection or tracking
+        • See Privacy Policy for full details
+
+        5. ZERO-KNOWLEDGE PROOFS
+        What they are:
+        • Cryptographic privacy technology
+        • Prove claims without revealing identity
+        • Example: "I'm a group member" (without saying which one)
+
+        Technology:
+        • Semaphore Protocol (industry-standard)
+        • Mopro Framework (mobile ZK generation)
+        • All computation happens on YOUR device
+
+        Important:
+        • ZK proofs enhance privacy, not absolute security
+        • You're responsible for managing your ZK identity keys
+        • We're not liable for key loss or misuse
+        • NOT used for cryptocurrency or financial transactions
+
+        6. CRYPTOGRAPHY USAGE
+        Encryption is used for:
+        • Local data protection (AES-GCM)
+        • P2P communication security
+        • Privacy-preserving proofs
+
+        NOT used for:
+        • Financial transactions
+        • Cryptocurrency trading
+        • Blockchain operations
+        • Money transfers
+
+        Export Compliance:
+        • Encryption for authentication/privacy only
+        • Compliant with iOS App Store guidelines
+
+        7. APPLE SERVICES
+        The App uses Apple's native frameworks:
+        • MultipeerConnectivity (P2P networking)
+        • PassKit (Apple Wallet)
+        • Keychain (key storage)
+
+        These follow Apple's terms and conditions.
+
+        8. OPEN-SOURCE LIBRARIES
+        • SemaphoreSwift: ZK proof generation
+        • Mopro: Mobile ZK optimization
+
+        These run ON YOUR DEVICE and don't transmit data.
+
+        9. NO THIRD-PARTY SERVICES
+        We do NOT use:
+        • Analytics or tracking services
+        • Advertising networks
+        • Cloud databases
+        • Authentication providers
+
+        10. DISCLAIMERS
+        The App is provided "AS IS":
+        • No warranties or guarantees
+        • No guarantee of error-free operation
+        • Works offline, but P2P requires network permissions
+
+        11. LIMITATION OF LIABILITY
+        We're NOT liable for:
+        • Data loss
+        • Security breaches from device compromise
+        • ZK identity key loss
+        • Misuse by users
+        • Third-party actions
+
+        Maximum liability: $10 USD or amount paid (if any).
+
+        12. INTELLECTUAL PROPERTY
+        • App licensed under Apache License 2.0
+        • YOU own your business card data
+        • Open-source: github.com/kidneyweakx/solidarity
+
+        13. UPDATES & CHANGES
+        • We may update the App or these Terms anytime
+        • Material changes will be notified via app updates
+        • Continued use = acceptance of changes
+
+        14. TERMINATION
+        • You can stop using anytime (just delete the App)
+        • We may discontinue the App at any time
+        • Upon termination, delete the App and its data
+
+        15. GOVERNING LAW
+        • Governed by laws of Taiwan
+        • Disputes resolved through good-faith negotiation
+
+        16. CONTACT
+        Questions? Create an issue:
+        https://github.com/kidneyweakx/solidarity/issues
+
+        17. ACKNOWLEDGMENT
+        By using Solid(ar)ity, you acknowledge:
+        • You've read and understand these Terms
+        • The App operates entirely on your device
+        • You're responsible for your data and device security
+        • This is NOT a cryptocurrency or financial app
+
+        Open Source • Privacy-First • Community-Driven
+        """
     }
 }
 

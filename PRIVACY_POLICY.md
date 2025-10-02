@@ -1,12 +1,12 @@
 # Privacy Policy for Solid(ar)ity
 
-**Last Updated:** 2025.10.02
+**Last Updated:** 2025-01-15
 
 ## Introduction
 
-Solid(ar)ity ("we," "our," or "the app") is a privacy-first business card sharing application. This Privacy Policy explains our commitment to protecting your privacy and details how we handle your information.
+Solid(ar)ity is a privacy-first, peer-to-peer business card sharing application that prioritizes your privacy through local-first architecture and advanced zero-knowledge cryptography.
 
-**Our Core Principle:** Your data belongs to you. It lives on your device. We never collect, store, or transmit your personal information to any server.
+**Our Core Principle:** Your data belongs to you. Everything stays on your device. We operate with zero servers and zero data collection.
 
 ---
 
@@ -92,19 +92,68 @@ Before sharing your card, you select the privacy level. Only fields marked for t
 
 ---
 
-## Zero-Knowledge Proofs
+## Zero-Knowledge Proofs (Advanced Privacy Technology)
 
-Solid(ar)ity uses the **Semaphore protocol** to enable privacy-preserving group verification:
+Solid(ar)ity implements **Zero-Knowledge Proofs (ZKPs)** using the **Semaphore protocol** and **Mopro framework** for privacy-preserving group verification:
 
-- **Identity Generation:** A cryptographic identity is generated locally on your device
-- **Group Membership:** You can prove you belong to a group (e.g., "Attendees of Conference X") without revealing which specific member you are
-- **No Data Exposure:** Zero-knowledge proofs allow verification of claims without exposing your identity or personal information
-- **Local Computation:** All proof generation happens on your device using the Mopro framework
+### What Are Zero-Knowledge Proofs?
+Zero-knowledge proofs are cryptographic methods that allow you to prove a statement is true (e.g., "I am a member of this group") without revealing any other information about yourself.
 
-Technical Details:
-- Private keys are stored securely in the iOS Keychain
-- Proofs are generated on-device and never transmitted to external servers
-- Group Merkle roots may be stored on decentralized systems (e.g., IPFS) for verification, but these contain no personal information
+### How We Use ZK Technology:
+
+**1. Local Identity Generation**
+- A unique cryptographic identity (commitment) is generated **entirely on your device**
+- Your identity consists of:
+  - **Private key**: Stored securely in iOS Keychain (never leaves your device)
+  - **Public commitment**: A cryptographic hash that represents your identity without revealing it
+- No personal information is embedded in your ZK identity
+
+**2. Group Membership Verification**
+- Join verified groups (e.g., "Conference Attendees 2025", "Company Employees")
+- **Prove you're a member** without revealing:
+  - Which specific member you are
+  - Your personal information
+  - Your device identifier
+- Example: "I am one of 500 conference attendees" (without disclosing which one)
+
+**3. Selective Disclosure with ZK**
+- When sharing your business card, you can generate a ZK proof that:
+  - Verifies you belong to a specific group
+  - Confirms certain claims (e.g., "I work at Company X")
+  - Protects your privacy by not revealing your exact identity within the group
+
+### Technical Implementation:
+
+| Component | Description | Security |
+|-----------|-------------|----------|
+| **Semaphore Protocol** | Industry-standard ZK group membership protocol | Audited, widely used in privacy tech |
+| **Mopro Framework** | Mobile-optimized ZK proof generation | Runs entirely on-device, no network required |
+| **Merkle Trees** | Data structure for efficient group membership proofs | Cryptographically secure, tamper-proof |
+| **Keychain Storage** | iOS Keychain for private key protection | Hardware-backed encryption (Secure Enclave when available) |
+
+### What Information Is Stored:
+
+**On Your Device:**
+- Your ZK identity private key (iOS Keychain)
+- Groups you've joined (local encrypted storage)
+- Group Merkle roots (public data, no personal info)
+
+**What Is NOT Stored:**
+- No centralized database of identities
+- No server-side tracking
+- No linkage between your ZK identity and your business card
+
+### Privacy Guarantees:
+- **Anonymity**: Your identity within a group is protected
+- **Unlinkability**: Different proofs cannot be linked to the same person
+- **Local Computation**: All ZK proofs are generated on your device
+- **No Server Dependency**: ZK verification works peer-to-peer, offline-first
+
+### Use Cases:
+1. **Verified Professional Groups**: Prove you work at a company without revealing your employee ID
+2. **Event Attendance**: Show you attended a conference without exposing your exact identity
+3. **Alumni Networks**: Verify you graduated from a university while maintaining privacy
+4. **Privacy-Preserving Networking**: Share credentials without revealing unnecessary personal details
 
 ---
 
@@ -135,15 +184,40 @@ We implement industry-standard security measures:
 
 ---
 
-## Third-Party Services
+## Third-Party Services and Libraries
 
-Solid(ar)ity **does not integrate with any third-party analytics, advertising, or tracking services**.
+### What We DO NOT Use:
+❌ **No Analytics Services** (Google Analytics, Firebase, etc.)
+❌ **No Advertising Networks**
+❌ **No Tracking SDKs**
+❌ **No Cloud Databases**
+❌ **No Authentication Providers** (no Web3Auth, no OAuth)
+❌ **No Crash Reporting Services**
 
-The app uses the following open-source libraries for core functionality:
-- **SemaphoreSwift** (https://github.com/zkmopro/SemaphoreSwift) - Zero-knowledge proof implementation
-- **Mopro** (https://zkmopro.org/) - Mobile proof generation framework
+### Apple Native Frameworks (Built-in iOS):
+✅ **MultipeerConnectivity**: For peer-to-peer device discovery (local network only)
+✅ **PassKit**: For Apple Wallet integration (all data stays local)
+✅ **Keychain**: For secure cryptographic key storage (hardware-backed)
+✅ **Core Data/FileManager**: For encrypted local data storage
 
-These libraries run **entirely on your device** and do not transmit data to external servers.
+These are **native iOS frameworks** provided by Apple, not third-party services.
+
+### Open-Source Libraries (On-Device Only):
+
+| Library | Purpose | Data Transmission | Privacy |
+|---------|---------|-------------------|---------|
+| **SemaphoreSwift** | Zero-knowledge proof generation | None - runs locally | Full privacy, no network calls |
+| **Mopro** | Mobile ZK proof optimization | None - on-device computation | Offline-first, no data leakage |
+
+**Source Code:**
+- SemaphoreSwift: https://github.com/zkmopro/SemaphoreSwift
+- Mopro: https://zkmopro.org/
+
+These libraries are **audited, open-source, and run entirely on your device**. They do not:
+- Transmit data over the network
+- Communicate with external servers
+- Track your usage
+- Collect analytics
 
 ---
 
@@ -183,12 +257,27 @@ We will notify users of significant changes through:
 
 ---
 
+## Export Control and Cryptography Compliance
+
+Solid(ar)ity uses cryptographic technology (AES-GCM encryption and zero-knowledge proofs) for **privacy and security purposes only**, not for financial transactions or cryptocurrency.
+
+**Encryption Use Cases:**
+- Protecting your local data (AES-GCM)
+- Securing peer-to-peer communications (Apple's MultipeerConnectivity)
+- Generating privacy-preserving proofs (Semaphore ZK protocol)
+
+**Compliance:**
+- Cryptography is used solely for data protection and user authentication
+- No cryptocurrency wallet functionality
+- No financial transactions or blockchain integration
+- Compliant with iOS App Store cryptography guidelines
+
 ## Contact Us
 
 If you have questions about this Privacy Policy or Solid(ar)ity's privacy practices:
 
-- **Email:** support@knyx.dev
 - **GitHub Issues:** https://github.com/kidneyweakx/solidarity/issues
+- **Email:** (Create an issue for support)
 
 ---
 
