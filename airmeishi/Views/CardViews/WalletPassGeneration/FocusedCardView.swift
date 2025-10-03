@@ -17,7 +17,19 @@ struct FocusedCardView: View {
     @EnvironmentObject private var theme: ThemeManager
     @State private var showingActionMenu = false
 
+    init(card: BusinessCard, onEdit: @escaping () -> Void, onDelete: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self.card = card
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.onClose = onClose
+    }
+
     var body: some View {
+        // Removed debug print to reduce body re-evaluation overhead
+        bodyContent
+    }
+
+    private var bodyContent: some View {
         VStack(spacing: 20) {
             // Main card with enhanced design
             ZStack(alignment: .topTrailing) {
@@ -54,12 +66,12 @@ struct FocusedCardView: View {
                             }
                     )
 
-                // Enhanced edit button
+                // Enhanced edit button - larger for easier tapping
                 Button(action: onEdit) {
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(12)
+                        .padding(16)
                         .background(
                             LinearGradient(
                                 colors: [theme.cardAccent, theme.cardAccent.opacity(0.7)],
@@ -68,9 +80,9 @@ struct FocusedCardView: View {
                             )
                         )
                         .clipShape(Circle())
-                        .shadow(color: theme.cardAccent.opacity(0.5), radius: 8, x: 0, y: 4)
+                        .shadow(color: theme.cardAccent.opacity(0.5), radius: 10, x: 0, y: 5)
                 }
-                .padding(12)
+                .padding(16)
             }
 
             // Action buttons with black/white design

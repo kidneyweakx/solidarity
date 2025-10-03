@@ -35,7 +35,15 @@ struct BusinessCardListView: View {
                     ProgressView("Loading cards...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if cardManager.businessCards.isEmpty {
-                    EmptyWalletView(onCreate: { featuredCard = nil; showingCreateCard = true }, onScan: { showingOCRScanner = true })
+                    EmptyWalletView(
+                        onCreate: {
+                            featuredCard = nil
+                            DispatchQueue.main.async {
+                                showingCreateCard = true
+                            }
+                        },
+                        onScan: { showingOCRScanner = true }
+                    )
                 } else {
                     makeStack()
                 }
@@ -44,7 +52,12 @@ struct BusinessCardListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button(action: { featuredCard = nil; showingCreateCard = true }) {
+                        Button(action: {
+                            featuredCard = nil
+                            DispatchQueue.main.async {
+                                showingCreateCard = true
+                            }
+                        }) {
                             Label("Create Card", systemImage: "plus.circle.fill")
                         }
                         Button(action: { showingOCRScanner = true }) {
@@ -55,22 +68,21 @@ struct BusinessCardListView: View {
                             Label("Appearance", systemImage: "paintbrush.fill")
                         }
                     } label: {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [theme.cardAccent, theme.cardAccent.opacity(0.7)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 36, height: 36)
-                                .shadow(color: theme.cardAccent.opacity(0.5), radius: 8, x: 0, y: 4)
-
+                        // Black & white style button
+                        HStack(spacing: 4) {
                             Image(systemName: "plus")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.white)
+                                .font(.system(size: 16, weight: .bold))
+                            Text("Add")
+                                .font(.system(size: 16, weight: .semibold))
                         }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color.black)
+                                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
                     }
                 }
             }
@@ -85,7 +97,9 @@ struct BusinessCardListView: View {
                 OCRScannerView { extracted in
                     featuredCard = extracted
                     isFeatured = true
-                    showingCreateCard = true
+                    DispatchQueue.main.async {
+                        showingCreateCard = true
+                    }
                 }
             }
             .sheet(isPresented: $showingAppearance) {
@@ -94,7 +108,10 @@ struct BusinessCardListView: View {
             }
             .sheet(isPresented: $showingAddPass) {
                 if let pass = pendingPass {
-                    AddPassesControllerView(pass: pass)
+                    ZStack {
+                        Color.white.ignoresSafeArea()
+                        AddPassesControllerView(pass: pass)
+                    }
                 }
             }
             .alert("Error", isPresented: .init(get: { alertMessage != nil }, set: { _ in alertMessage = nil })) {
@@ -164,6 +181,10 @@ private extension BusinessCardListView {
         proximityManager.startAdvertising(with: card, sharingLevel: .professional)
     }
     func handleFocus(_ card: BusinessCard) {
+        // Add haptic feedback for better UX
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
             featuredCard = card
             isFeatured = true
@@ -186,8 +207,18 @@ private extension BusinessCardListView {
 
 
     func beginEdit(_ card: BusinessCard) {
+
+        // Add haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+
+        // Ensure featuredCard is set first before triggering sheet
         featuredCard = card
-        showingCreateCard = true
+
+        // Use DispatchQueue to ensure state is updated before sheet presentation
+        DispatchQueue.main.async {
+            self.showingCreateCard = true
+        }
     }
     
     func addToWallet(_ card: BusinessCard) {
@@ -391,26 +422,27 @@ private struct WalletCardView: View {
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isFlipped)
                 .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 CategoryTag(text: category(for: card))
                 Button(action: editTapped) {
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.black)
-                        .padding(8)
+                        .frame(width: 44, height: 44)
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(10)
+                .padding(8)
                 Button(action: addPassTapped) {
                     Image(systemName: "wallet.pass")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.black)
-                        .padding(8)
+                        .frame(width: 44, height: 44)
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(10)
+                .padding(8)
+                .buttonStyle(PlainButtonStyle())
             }
         }
     }

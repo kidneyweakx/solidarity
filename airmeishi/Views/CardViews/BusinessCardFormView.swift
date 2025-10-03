@@ -23,13 +23,8 @@ struct BusinessCardFormView: View {
     @State private var isLoading = false
     @State private var showingWalletPassSheet = false
     @State private var createdCardForWallet: BusinessCard?
-    
-    // Social network management
-    @State private var newSocialPlatform = SocialPlatform.linkedin
-    @State private var newSocialUsername = ""
-    @State private var newSocialUrl = ""
-    @State private var showingSocialForm = false
-    
+    @State private var isInitializing = true
+
     // Validation states
     @State private var nameError: String?
     @State private var emailError: String?
@@ -38,6 +33,7 @@ struct BusinessCardFormView: View {
     let onSave: (BusinessCard) -> Void
     
     init(businessCard: BusinessCard? = nil, forceCreate: Bool = false, onSave: @escaping (BusinessCard) -> Void) {
+
         let initialCard = businessCard ?? BusinessCard(name: "")
         self._businessCard = State(initialValue: initialCard)
         if forceCreate {
@@ -59,20 +55,46 @@ struct BusinessCardFormView: View {
     }
     
     var body: some View {
+        // Removed debug print to reduce body re-evaluation overhead
+        bodyContent
+    }
+
+    private var bodyContent: some View {
         NavigationView {
-            Form {
-                groupBannerSection
-                basicInfoSection
-                contactInfoSection
-                animalSection
-                socialNetworksSection
-                simplePrivacySection
-                if businessCard.sharingPreferences.useZK {
-                    Section {
-                        ZKVerifyButton(businessCard: businessCard, sharingLevel: .professional)
-                    } header: {
-                        Text("ZK Tools")
+            ZStack {
+                // Base layer - always visible to prevent gray screen
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                Form {
+                    groupBannerSection
+                    basicInfoSection
+                    contactInfoSection
+                    animalSection
+                    // socialNetworksSection - Removed due to crashes
+                    simplePrivacySection
+                    if businessCard.sharingPreferences.useZK {
+                        Section {
+                            ZKVerifyButton(businessCard: businessCard, sharingLevel: .professional)
+                        } header: {
+                            Text("ZK Tools")
+                        }
                     }
+                }
+                .opacity(isInitializing ? 0 : 1)
+
+                if isInitializing {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(1.5)
+
+                        Text("Loading card...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle(isEditing ? "Edit Card" : "New Card")
@@ -85,8 +107,28 @@ struct BusinessCardFormView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button(action: {
                         saveBusinessCard()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                            Text("Add")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor((isLoading || !isFormValid) ? .gray : .white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill((isLoading || !isFormValid) ? Color.gray.opacity(0.2) : Color.black)
+                                .shadow(
+                                    color: (isLoading || !isFormValid) ? .clear : Color.black.opacity(0.3),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
+                                )
+                        )
                     }
                     .disabled(isLoading || !isFormValid)
                 }
@@ -109,42 +151,19 @@ struct BusinessCardFormView: View {
                     )
                 }
             }
+            .onAppear {
+                // Set loading state to false immediately to prevent gray screen
+                DispatchQueue.main.async {
+                    isInitializing = false
+                }
+            }
         }
         .hideKeyboardAccessory()
     }
     
     // MARK: - Form Sections
     
-    private var socialNetworksSection: some View {
-        Section {
-            ForEach(businessCard.socialNetworks) { social in
-                SocialNetworkRowView(social: social) {
-                    removeSocialNetwork(social)
-                }
-            }
-            .onDelete(perform: deleteSocialNetworks)
-            
-            Button("Add Social Network") {
-                showingSocialForm = true
-            }
-            .disabled(businessCard.socialNetworks.count >= 2)
-            .foregroundColor(.blue)
-        } header: {
-            Text("Social Networks")
-        } footer: {
-            Text("Add up to 2 social networks or websites")
-        }
-        .sheet(isPresented: $showingSocialForm) {
-            SocialNetworkFormView(
-                platform: $newSocialPlatform,
-                username: $newSocialUsername,
-                url: $newSocialUrl
-            ) { social in
-                addSocialNetwork(social)
-                showingSocialForm = false
-            }
-        }
-    }
+    // socialNetworksSection removed - feature disabled due to crashes
     
     private var simplePrivacySection: some View {
         Section {
@@ -336,19 +355,7 @@ struct BusinessCardFormView: View {
         }
     }
     
-    private func addSocialNetwork(_ social: SocialNetwork) {
-        if businessCard.socialNetworks.count < 2 {
-            businessCard.socialNetworks.append(social)
-        }
-    }
-    
-    private func removeSocialNetwork(_ social: SocialNetwork) {
-        businessCard.socialNetworks.removeAll { $0.id == social.id }
-    }
-    
-    private func deleteSocialNetworks(at offsets: IndexSet) {
-        businessCard.socialNetworks.remove(atOffsets: offsets)
-    }
+    // Social network functions removed - feature disabled
     
     private func loadSelectedImage(_ item: PhotosPickerItem?) {
         guard let item = item else { return }

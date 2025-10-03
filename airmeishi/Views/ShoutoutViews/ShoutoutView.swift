@@ -10,7 +10,6 @@ import SwiftUI
 struct ShoutoutView: View {
     @StateObject private var chartService = ShoutoutChartService.shared
     @State private var showingFilters = false
-    @State private var showingUserDetail = false
     @State private var selectedUser: ShoutoutUser?
     @State private var searchText = ""
     @State private var showingCreateShoutout = false
@@ -54,10 +53,8 @@ struct ShoutoutView: View {
             .sheet(isPresented: $showingFilters) {
                 ShoutoutFiltersView()
             }
-            .sheet(isPresented: $showingUserDetail) {
-                if let user = selectedUser {
-                    ShoutoutDetailView(user: user)
-                }
+            .sheet(item: $selectedUser) { user in
+                ShoutoutDetailView(user: user)
             }
             .sheet(isPresented: $showingCreateShoutout) {
                 CreateShoutoutView(selectedUser: selectedUser)
@@ -192,8 +189,12 @@ struct ShoutoutView: View {
                             dataPoint: dataPoint,
                             isLighteningAnimating: isLighteningAnimating
                         ) {
+
+                            // Add haptic feedback
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+
                             selectedUser = dataPoint.user
-                            showingUserDetail = true
                         }
                     }
                 }

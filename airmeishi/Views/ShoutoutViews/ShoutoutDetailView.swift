@@ -13,8 +13,18 @@ struct ShoutoutDetailView: View {
     @State private var showingCreateShoutout = false
     @State private var isLighteningAnimating = false
     @State private var showingDeleteConfirm = false
-    
+    @State private var isLoading = true
+
+    init(user: ShoutoutUser) {
+        self.user = user
+    }
+
     var body: some View {
+        // Removed debug print to reduce body re-evaluation overhead
+        bodyContent
+    }
+
+    private var bodyContent: some View {
         NavigationView {
             ZStack {
                 // Dark gradient background with lightning effect
@@ -29,25 +39,37 @@ struct ShoutoutDetailView: View {
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Lightening header with profile
-                        lightningHeader
-                        
-                        // Lightening stats grid
-                        lightningStatsGrid
-                        
-                        // User Information
-                        informationSection
-                        
-                        // Tags and Skills
-                        tagsSection
-                        
-                        // Lightening Action Buttons
-                        lightningActionButtons
+
+                if isLoading {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.5)
+
+                        Text("Loading profile...")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .padding()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Lightening header with profile
+                            lightningHeader
+
+                            // Lightening stats grid
+                            lightningStatsGrid
+
+                            // User Information
+                            informationSection
+
+                            // Tags and Skills
+                            tagsSection
+
+                            // Lightening Action Buttons
+                            lightningActionButtons
+                        }
+                        .padding()
+                    }
                 }
             }
             .navigationTitle("Lightening Profile")
@@ -73,9 +95,17 @@ struct ShoutoutDetailView: View {
             }
             .onAppear {
                 startLighteningAnimation()
+                // Simulate loading completion
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isLoading = false
+                }
+            }
+            .onDisappear {
             }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+        }
     }
     
     // MARK: - Lightening Header
