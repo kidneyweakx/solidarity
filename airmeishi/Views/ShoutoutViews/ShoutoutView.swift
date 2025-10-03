@@ -159,24 +159,46 @@ struct ShoutoutView: View {
     }
     
     // MARK: - Card Gallery
-    
+
     private var cardGallery: some View {
         ScrollView {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16)
-            ], spacing: 16) {
-                ForEach(chartService.filteredData) { dataPoint in
-                    LighteningCardView(
-                        dataPoint: dataPoint,
-                        isLighteningAnimating: isLighteningAnimating
-                    ) {
-                        selectedUser = dataPoint.user
-                        showingUserDetail = true
+            if chartService.filteredData.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "bolt.slash.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                        .padding(.top, 60)
+
+                    Text("No cards found")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+
+                    Text("Be the first to share your business card!")
+                        .font(.body)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+            } else {
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 16),
+                    GridItem(.flexible(), spacing: 16)
+                ], spacing: 16) {
+                    ForEach(chartService.filteredData) { dataPoint in
+                        LighteningCardView(
+                            dataPoint: dataPoint,
+                            isLighteningAnimating: isLighteningAnimating
+                        ) {
+                            selectedUser = dataPoint.user
+                            showingUserDetail = true
+                        }
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
     }
     

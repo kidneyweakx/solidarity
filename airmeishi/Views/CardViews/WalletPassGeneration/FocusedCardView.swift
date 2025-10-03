@@ -12,53 +12,123 @@ struct FocusedCardView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
-    
+
     @GestureState private var dragOffset: CGSize = .zero
     @EnvironmentObject private var theme: ThemeManager
-    
+    @State private var showingActionMenu = false
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 20) {
+            // Main card with enhanced design
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(gradient(card))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(theme.cardAccent.opacity(0.35), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [theme.cardAccent.opacity(0.6), theme.cardAccent.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
                     )
                     .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
-                    .frame(height: 240)
+                    .shadow(color: theme.cardAccent.opacity(0.3), radius: 20, x: 0, y: 10)
+                    .frame(height: 280)
                     .overlay { cardContent() }
                     .offset(x: dragOffset.width)
+                    .rotation3DEffect(
+                        .degrees(Double(dragOffset.width) / 20),
+                        axis: (x: 0, y: 1, z: 0)
+                    )
                     .gesture(
                         DragGesture()
                             .updating($dragOffset) { value, state, _ in
                                 state = value.translation
                             }
                             .onEnded { value in
-                                if value.translation.width < -80 { onDelete() }
-                                if value.translation.width > 80 { onEdit() }
+                                if value.translation.width < -100 { onDelete() }
+                                if value.translation.width > 100 { onEdit() }
                             }
                     )
+
+                // Enhanced edit button
                 Button(action: onEdit) {
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.black)
-                        .padding(8)
-                        .background(theme.cardAccent.opacity(0.15))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(
+                            LinearGradient(
+                                colors: [theme.cardAccent, theme.cardAccent.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .clipShape(Circle())
+                        .shadow(color: theme.cardAccent.opacity(0.5), radius: 8, x: 0, y: 4)
                 }
-                .padding(10)
+                .padding(12)
             }
-            HStack(spacing: 12) {
-                Button(role: .cancel) { onClose() } label: {
-                    Label("Close", systemImage: "xmark.circle.fill")
+
+            // Action buttons with black/white design
+            HStack(spacing: 16) {
+                Button(action: onClose) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Close")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
                 }
-                .buttonStyle(.bordered)
-                Button("Delete", role: .destructive) { onDelete() }
-                    .buttonStyle(.borderedProminent)
-                    .foregroundColor(.gray)
+
+                Button(action: onEdit) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil.circle.fill")
+                        Text("Edit")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                }
+
+                Button(action: onDelete) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "trash.circle.fill")
+                        Text("Delete")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.red.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: .red.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
             }
+            .padding(.horizontal, 4)
+
+            // Swipe hint
+            Text("← Swipe to delete • Swipe to edit →")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.6))
+                .padding(.top, 4)
         }
+        .padding(.horizontal, 8)
     }
     
     @ViewBuilder

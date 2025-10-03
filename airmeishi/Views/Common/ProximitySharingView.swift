@@ -52,13 +52,14 @@ struct ProximitySharingView: View {
                     Button(action: toggleMatching) {
                         Text(isMatching ? "Stop Matching" : "Start Matching")
                 .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(isMatching ? .white : .black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.white)
+                            .background(isMatching ? Color.red.opacity(0.9) : Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
-                    
+
                     Button(action: { showQRScanner = true }) {
                         HStack(spacing: 6) {
                             Image(systemName: "qrcode.viewfinder")
@@ -103,11 +104,11 @@ struct ProximitySharingView: View {
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                             .padding(10)
-                            .background(Color.white)
+                            .background(Color.gray.opacity(0.3))
                             .clipShape(Circle())
-                            .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 3)
+                            .shadow(color: Color.black.opacity(0.5), radius: 6, x: 0, y: 3)
                     }
                 }
                 .padding(.top, 12)

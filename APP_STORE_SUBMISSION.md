@@ -25,29 +25,29 @@ Privacy-first business card sharing with zero-knowledge proofs. Share contacts l
 ```
 Solid(ar)ity: Privacy-Preserving Business Card Sharing
 
-🔒 ZERO DATA COLLECTION
+ZERO DATA COLLECTION
 Your business cards stay on your device. No servers, no cloud, no tracking.
 
-🤝 PEER-TO-PEER SHARING
+PEER-TO-PEER SHARING
 • Share via proximity (MultipeerConnectivity)
 • Generate QR codes
 • Export to Apple Wallet
 • AirDrop integration
 
-🛡️ ZERO-KNOWLEDGE PRIVACY
+ZERO-KNOWLEDGE PRIVACY
 • Advanced cryptography (Semaphore protocol)
 • Prove group membership without revealing identity
 • Selective disclosure: share only what you choose
 • Privacy levels: Public, Professional, Personal
 
-✨ KEY FEATURES
+KEY FEATURES
 • Offline-first: works without internet
 • Local encryption (AES-GCM)
 • Group management with ZK proofs
 • Apple Wallet integration
 • No account required
 
-🔐 SECURITY BY DESIGN
+SECURITY BY DESIGN
 • Private keys stored in iOS Keychain
 • No third-party analytics or tracking
 • Open-source: verify our privacy claims
@@ -112,6 +112,12 @@ https://github.com/kidneyweakx/solidarity/blob/main/PRIVACY_POLICY.md
 ```
 https://github.com/kidneyweakx/solidarity/blob/main/TERMS_OF_SERVICE.md
 ```
+
+**Encryption Compliance Documentation:**
+```
+https://github.com/kidneyweakx/solidarity/blob/main/ENCRYPTION_EXPORT_COMPLIANCE.md
+```
+(如果審核詢問加密相關問題時提供)
 
 ---
 
@@ -293,7 +299,13 @@ KEY POINTS:
    - May test on simulator, but P2P works best on physical devices
    - All features work offline
 
-5. OPEN SOURCE
+5. VERSION 1.0.0 SCOPE
+   - ENS (Ethereum Name Service) integration is planned for v1.1+
+   - Current version (v1.0.0) focuses on core privacy and P2P sharing
+   - No blockchain or Web3 features in this submission
+   - Future versions may include optional ENS username resolution
+
+6. OPEN SOURCE
    - Source code: https://github.com/kidneyweakx/solidarity
    - Privacy policy and terms available in-app and on GitHub
 

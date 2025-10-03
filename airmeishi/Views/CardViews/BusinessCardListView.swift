@@ -44,10 +44,34 @@ struct BusinessCardListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("Create Card") { featuredCard = nil; showingCreateCard = true }
-                        Button("Scan Card") { showingOCRScanner = true }
-                        Button("Appearance") { showingAppearance = true }
-                    } label: { Image(systemName: "plus") }
+                        Button(action: { featuredCard = nil; showingCreateCard = true }) {
+                            Label("Create Card", systemImage: "plus.circle.fill")
+                        }
+                        Button(action: { showingOCRScanner = true }) {
+                            Label("Scan Card", systemImage: "camera.fill")
+                        }
+                        Divider()
+                        Button(action: { showingAppearance = true }) {
+                            Label("Appearance", systemImage: "paintbrush.fill")
+                        }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [theme.cardAccent, theme.cardAccent.opacity(0.7)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 36, height: 36)
+                                .shadow(color: theme.cardAccent.opacity(0.5), radius: 8, x: 0, y: 4)
+
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
                 }
             }
             .sheet(isPresented: $showingCreateCard) {
@@ -394,11 +418,8 @@ private struct WalletCardView: View {
     private func editTapped() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
-        withAnimation { isFlipped = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            withAnimation { isFlipped = false }
-            onEdit()
-        }
+        // Directly open edit without flip animation to avoid gray screen
+        onEdit()
     }
     
     private func addPassTapped() {
@@ -464,48 +485,72 @@ private struct EmptyWalletView: View {
     let onScan: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.crop.rectangle")
-                .font(.system(size: 64))
-                .foregroundColor(.white.opacity(0.3))
-
-            Text("Business Card Not Found")
-                .font(.title2)
-                .bold()
-                .foregroundColor(.white)
-
-            Text("Add a card or scan to get started")
-                .foregroundColor(.white.opacity(0.6))
-
-            HStack(spacing: 12) {
-                Button(action: onCreate) {
-                    Text("Add Card")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.black)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+        VStack(spacing: 32) {
+            // Animated icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    )
+                    .frame(width: 120, height: 120)
+                    .blur(radius: 20)
+
+                Image(systemName: "person.crop.rectangle.stack")
+                    .font(.system(size: 64, weight: .light))
+                    .foregroundColor(.white.opacity(0.9))
+            }
+
+            VStack(spacing: 12) {
+                Text("No Business Cards")
+                    .font(.title.bold())
+                    .foregroundColor(.white)
+
+                Text("Create your first card or scan one to get started")
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            VStack(spacing: 16) {
+                Button(action: onCreate) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                        Text("Create New Card")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                 }
 
                 Button(action: onScan) {
-                    Text("Scan Card")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.white.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    HStack(spacing: 12) {
+                        Image(systemName: "camera.fill")
+                            .font(.title3)
+                        Text("Scan Business Card")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                    )
                 }
             }
+            .padding(.horizontal, 32)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

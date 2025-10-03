@@ -13,7 +13,7 @@ import UIKit
 struct WalletPassGenerationView: View {
     let businessCard: BusinessCard
     let sharingLevel: SharingLevel
-    
+
     @StateObject private var passKitManager = PassKitManager.shared
     @State private var showingAddToWallet = false
     @State private var generatedPassData: Data?
@@ -23,8 +23,13 @@ struct WalletPassGenerationView: View {
     @State private var errorDetail = ""
     @State private var importString: String = ""
     @State private var showCopiedFeedback = false
-    
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool {
+        horizontalSizeClass == .regular
+    }
     
     var body: some View {
         NavigationView {
@@ -33,17 +38,19 @@ struct WalletPassGenerationView: View {
                     // Header
                     VStack(spacing: 12) {
                         Image(systemName: "wallet.pass")
-                            .font(.system(size: 60))
+                            .font(.system(size: isIPad ? 72 : 60))
                             .foregroundColor(.blue)
-                        
+                            .padding(.top, isIPad ? 20 : 0)
+
                         Text("Apple Wallet Pass")
-                            .font(.title2)
+                            .font(isIPad ? .title : .title2)
                             .fontWeight(.bold)
-                        
+
                         Text("Create a pass for Apple Wallet that contains your business card information")
-                            .font(.subheadline)
+                            .font(isIPad ? .body : .subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, isIPad ? 40 : 20)
                     }
                     .padding()
                     
@@ -148,7 +155,9 @@ struct WalletPassGenerationView: View {
                     // Information section
                     PassInformationView()
                 }
-                .padding()
+                .padding(isIPad ? 32 : 16)
+                .frame(maxWidth: isIPad ? 700 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("Wallet Pass")
             .navigationBarTitleDisplayMode(.inline)
@@ -160,6 +169,7 @@ struct WalletPassGenerationView: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
         .alert("Unable to Create Pass", isPresented: $showingError) {
             Button("OK") {
                 errorMessage = ""
@@ -184,9 +194,9 @@ struct WalletPassGenerationView: View {
                             Text("Copied to clipboard")
                         }
                         .font(.subheadline)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding()
-                        .background(Color.black.opacity(0.7))
+                        .background(Color.black.opacity(0.8))
                         .cornerRadius(10)
                         .padding(.bottom, 50)
                     }
@@ -286,21 +296,21 @@ struct PassPreviewView: View {
             // Pass header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Airmeishi")
+                    Text("Solid(ar)ity")
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(.white)
-                    
+                        .foregroundStyle(.white)
+
                     Text("Business Card")
                         .font(.caption2)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.9))
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "person.crop.circle")
                     .font(.title2)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
             .padding()
             .background(
@@ -316,9 +326,10 @@ struct PassPreviewView: View {
                 // Primary field
                 VStack(alignment: .leading, spacing: 4) {
                     Text("NAME")
-                        .font(.caption2)
+                        .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                    
+
                     Text(businessCard.name)
                         .font(.title3)
                         .fontWeight(.bold)
@@ -329,52 +340,56 @@ struct PassPreviewView: View {
                     if let title = businessCard.title {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("TITLE")
-                                .font(.caption2)
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
-                            
+
                             Text(title)
                                 .font(.subheadline)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if let company = businessCard.company {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("COMPANY")
-                                .font(.caption2)
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
-                            
+
                             Text(company)
                                 .font(.subheadline)
                         }
                     }
                 }
-                
+
                 // Auxiliary fields
                 HStack {
                     if let email = businessCard.email {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("EMAIL")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Text(email)
                                 .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            Text(email)
+                                .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if let phone = businessCard.phone {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("PHONE")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Text(phone)
                                 .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            Text(phone)
+                                .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
                     }
@@ -391,11 +406,11 @@ struct PassPreviewView: View {
                             .overlay(
                                 Image(systemName: "qrcode")
                                     .font(.title)
-                                    .foregroundColor(.white)
+                                    .foregroundStyle(.white)
                             )
                         
                         Text("QR Code")
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     

@@ -65,37 +65,39 @@ struct LanguageOptionView: View {
     let language: ScanLanguage
     let isSelected: Bool
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
+            HStack(spacing: 18) {
                 Text(language.flag)
-                    .font(.system(size: 30))
-                
-                VStack(alignment: .leading, spacing: 4) {
+                    .font(.system(size: 36))
+
+                VStack(alignment: .leading, spacing: 6) {
                     Text(language.displayName)
-                        .font(.headline)
+                        .font(.body)
+                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
-                    
+
                     Text(language.rawValue)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.blue)
                         .font(.title2)
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? Color.blue.opacity(0.12) : Color(.systemGray6))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 14)
                             .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
                     )
             )
