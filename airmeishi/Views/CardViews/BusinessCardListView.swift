@@ -16,11 +16,13 @@ struct BusinessCardListView: View {
     @State private var showingCreateCard = false
     @State private var showingOCRScanner = false
     @State private var featuredCard: BusinessCard?
+    @State private var cardToEdit: BusinessCard?
     @State private var isFeatured = false
     @State private var isSharing = false
     @State private var showingAppearance = false
     @State private var showingAddPass = false
     @State private var pendingPass: PKPass?
+    @State private var pendingPassCard: BusinessCard?
     @State private var alertMessage: String?
     @State private var draggedCard: BusinessCard?
     @State private var dragOffset: CGSize = .zero
@@ -87,10 +89,15 @@ struct BusinessCardListView: View {
                 }
             }
             .sheet(isPresented: $showingCreateCard) {
-                // If featuredCard is nil, we are creating. Otherwise we are editing the selected card.
-                BusinessCardFormView(businessCard: featuredCard, forceCreate: featuredCard == nil) { saved in
-                    // Keep focus on updated card
+                // Create mode: always nil businessCard, always forceCreate
+                BusinessCardFormView(businessCard: nil, forceCreate: true) { saved in
                     featuredCard = saved
+                }
+            }
+            .sheet(item: $cardToEdit) { card in
+                BusinessCardFormView(businessCard: card, forceCreate: false) { saved in
+                    featuredCard = saved
+                    cardToEdit = nil
                 }
             }
             .sheet(isPresented: $showingOCRScanner) {
@@ -107,11 +114,38 @@ struct BusinessCardListView: View {
                     .environmentObject(theme)
             }
             .sheet(isPresented: $showingAddPass) {
-                if let pass = pendingPass {
-                    ZStack {
-                        Color.white.ignoresSafeArea()
+                ZStack {
+                    Color.black.ignoresSafeArea()
+
+                    if let pass = pendingPass {
                         AddPassesControllerView(pass: pass)
+                    } else {
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.5)
+
+                            Text("Preparing Wallet Pass...")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .onAppear {
+                    // Auto-generate pass when sheet appears if not already generated
+                    if pendingPass == nil, let card = pendingPassCard {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            generatePassFor(card)
+                        }
+                    }
+                }
+                .onDisappear {
+                    // Clear pass when sheet is dismissed
+                    pendingPass = nil
+                    pendingPassCard = nil
                 }
             }
             .alert("Error", isPresented: .init(get: { alertMessage != nil }, set: { _ in alertMessage = nil })) {
@@ -207,34 +241,39 @@ private extension BusinessCardListView {
 
 
     func beginEdit(_ card: BusinessCard) {
-
         // Add haptic feedback
         let impact = UIImpactFeedbackGenerator(style: .light)
         impact.impactOccurred()
 
-        // Ensure featuredCard is set first before triggering sheet
-        featuredCard = card
+        // Close focused view if open
+        isFeatured = false
 
-        // Use DispatchQueue to ensure state is updated before sheet presentation
-        DispatchQueue.main.async {
-            self.showingCreateCard = true
-        }
+        // Set cardToEdit - this will automatically trigger the sheet(item:)
+        cardToEdit = card
     }
     
     func addToWallet(_ card: BusinessCard) {
+        // Store the card and show sheet (will auto-generate on appear)
+        pendingPassCard = card
+        pendingPass = nil
+        showingAddPass = true
+    }
+
+    func generatePassFor(_ card: BusinessCard) {
         let result = PassKitManager.shared.generatePass(for: card, sharingLevel: .professional)
         switch result {
         case .success(let passData):
-            // Create PKPass and present add UI
+            // Create PKPass and update UI
             do {
                 let pass = try PKPass(data: passData)
                 pendingPass = pass
-                showingAddPass = true
             } catch {
                 alertMessage = "Failed to prepare Wallet pass: \(error.localizedDescription)"
+                showingAddPass = false
             }
         case .failure(let err):
             alertMessage = err.localizedDescription
+            showingAddPass = false
         }
     }
     
@@ -356,8 +395,9 @@ private struct WalletCardView: View {
     let card: BusinessCard
     var onEdit: () -> Void
     var onAddToWallet: () -> Void
-    
+
     @State private var isFlipped = false
+    @State private var editAttempted = false
     @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
@@ -432,7 +472,12 @@ private struct WalletCardView: View {
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(8)
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .contentShape(Rectangle())
+
                 Button(action: addPassTapped) {
                     Image(systemName: "wallet.pass")
                         .font(.system(size: 18, weight: .semibold))
@@ -441,17 +486,31 @@ private struct WalletCardView: View {
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(8)
                 .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .contentShape(Rectangle())
             }
+            .allowsHitTesting(true)
         }
     }
     
     private func editTapped() {
+        // Prevent multiple rapid taps
+        guard !editAttempted else { return }
+        editAttempted = true
+
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
+
         // Directly open edit without flip animation to avoid gray screen
         onEdit()
+
+        // Reset after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            editAttempted = false
+        }
     }
     
     private func addPassTapped() {
