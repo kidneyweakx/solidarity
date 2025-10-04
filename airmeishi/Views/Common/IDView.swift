@@ -26,19 +26,15 @@ enum EventLayoutMode: String, CaseIterable, Identifiable {
 struct IDView: View {
     @StateObject private var idm = SemaphoreIdentityManager.shared
     @StateObject private var group = SemaphoreGroupManager.shared
-    @State private var showingSettings = false
     @State private var showingCreateGroup = false
     @State private var identityCommitment: String = ""
-    @State private var proofStatus: String?
     @State private var ringActiveCount: Int = 0
     @State private var isPressing: Bool = false
     @State private var ringTimer: Timer?
     @State private var isWorking: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String?
-    @State private var latestProof: String?
-    @State private var isEditingProof: Bool = false
-    @State private var proofDraft: String = ""
+    
     
     var body: some View {
         NavigationStack {
@@ -51,38 +47,23 @@ struct IDView: View {
                         ringView(size: base * 0.62, index: 2)
                         ringView(size: base * 0.46, index: 1)
                         centerButton(size: base * 0.36)
-                            .onTapGesture(count: 3) {
-                                isEditingProof.toggle()
-                                if isEditingProof, let proof = latestProof { proofDraft = proof }
-                            }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(height: 360)
 
                 identityPanel()
-                verificationPanel()
             }
             .navigationTitle("ID")
             .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
-                        NavigationLink {
-                            GroupManagementView()
-                            } label: {
-                            Image(systemName: "person.3")
-                            }
-                            Button {
-                                showingSettings = true
-                            } label: {
-                                ZKBadge()
-                            }
-                        }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        GroupManagementView()
+                    } label: {
+                        Image(systemName: "person.3")
                     }
                 }
-        }
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack { ZKIdentitySettingsView() }
+            }
         }
         .sheet(isPresented: $showingCreateGroup) {
             NavigationStack { CreateGroupSheet() }
@@ -126,15 +107,7 @@ struct IDView: View {
                             .font(.title2.weight(.bold))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 1)
-                        if let status = proofStatus {
-                            Text(status)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.25))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else if !identityCommitment.isEmpty {
+                        if !identityCommitment.isEmpty {
                             VStack(spacing: 4) {
                                 Text("Commitment")
                                     .font(.caption2)
@@ -146,12 +119,9 @@ struct IDView: View {
                                     .padding(.vertical, 4)
                                     .background(Color.black.opacity(0.20))
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
-                                Text("Tap to prove")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.9))
                             }
                         } else {
-                            Text("Tap: ID + Proof\nHold: Create Group")
+                            Text("Tap: Create ID\nHold: Create Group")
                                 .font(.caption2)
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.white)
@@ -202,7 +172,6 @@ struct IDView: View {
     private func tapAction() {
         if isWorking { return }
         isWorking = true
-        proofStatus = "Working..."
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 // Ensure identity exists
@@ -212,39 +181,13 @@ struct IDView: View {
                 }
                 // Ensure membership includes self
                 if !group.members.contains(bundle.commitment) { group.addMember(bundle.commitment) }
-                // Generate proof if supported
-                if !SemaphoreIdentityManager.proofsSupported {
-                    DispatchQueue.main.async {
-                        proofStatus = "Proofs unavailable"
-                        isWorking = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-                    }
-                    return
-                }
-                let message = UUID().uuidString
-                let scope = "id_tap"
-                logProofInputs(commitment: bundle.commitment, members: group.members, message: message, scope: scope, depth: 16)
-                let proof = try idm.generateProof(
-                    groupCommitments: group.members.isEmpty ? [bundle.commitment] : group.members,
-                    message: message,
-                    scope: scope,
-                    merkleDepth: 16
-                )
-                logProofOutput(proof)
-                DispatchQueue.main.async {
-                    latestProof = proof
-                    proofStatus = "Proof generated"
-                    isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-                }
+                DispatchQueue.main.async { isWorking = false }
             } catch {
                 ZKLog.error("Error on tapAction: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     errorMessage = error.localizedDescription
                     showErrorAlert = true
-                    proofStatus = "Error: \(error.localizedDescription)"
                     isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
                 }
             }
         }
@@ -253,7 +196,6 @@ struct IDView: View {
     private func longPressAction() {
         if isWorking { return }
         isWorking = true
-        proofStatus = "Working..."
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bundle = try idm.loadOrCreateIdentity()
@@ -267,49 +209,10 @@ struct IDView: View {
                 DispatchQueue.main.async {
                     errorMessage = error.localizedDescription
                     showErrorAlert = true
-                    proofStatus = "Error: \(error.localizedDescription)"
                     isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
                 }
             }
         }
-    }
-
-    // MARK: - Logging helpers
-
-    private func logProofInputs(commitment: String, members: [String], message: String, scope: String, depth: Int) {
-        print("====== [Semaphore] Proof Inputs ======")
-        print("Identity commitment: \(commitment)")
-        print("Group members count: \(members.count)")
-        if members.isEmpty {
-            print("Members: []")
-        } else {
-            let preview = members.prefix(5).joined(separator: ", ")
-            print("Members preview (up to 5): [\(preview)]")
-        }
-        print("Message: \(message)")
-        print("Scope: \(scope)")
-        print("Merkle depth: \(depth)")
-        print("=====================================")
-    }
-
-    private func logProofOutput(_ proof: String) {
-        print("====== [Semaphore] Proof Output ======")
-        if let pretty = prettyPrintJSON(proof) {
-            print(pretty)
-        } else {
-            let snippet = proof.prefix(600)
-            print(String(snippet))
-            if proof.count > 600 { print("... (truncated) ...") }
-        }
-        print("=====================================")
-    }
-
-    private func prettyPrintJSON(_ jsonString: String) -> String? {
-        guard let data = jsonString.data(using: .utf8) else { return nil }
-        guard let obj = try? JSONSerialization.jsonObject(with: data, options: []) else { return nil }
-        guard let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .withoutEscapingSlashes]) else { return nil }
-        return String(data: prettyData, encoding: .utf8)
     }
 
     private func shortCommitment(_ c: String) -> String {
@@ -317,50 +220,6 @@ struct IDView: View {
         let start = c.prefix(6)
         let end = c.suffix(6)
         return String(start) + "…" + String(end)
-    }
-
-    // MARK: - Verification UI/Action
-
-    @ViewBuilder
-    private func verificationPanel() -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Verification")
-                    .font(.headline)
-                Spacer()
-                Button("Verify Proof") { verifyProofAction() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!SemaphoreIdentityManager.proofsSupported || latestProof == nil || isWorking)
-                    .foregroundColor(.gray)
-            }
-            if isEditingProof {
-                Text("Editing mode (triple tap center to toggle)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextEditor(text: $proofDraft)
-                    .font(.footnote)
-                    .frame(minHeight: 120, maxHeight: 180)
-                    .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemBackground)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.2)))
-            } else if let proof = latestProof {
-                let display = prettyPrintJSON(proof) ?? String(proof.prefix(600))
-                ScrollView {
-                    Text(display)
-                        .font(.footnote)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: 140)
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemBackground)))
-            } else {
-                Text("No proof yet. Tap the center to generate.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal)
     }
 
     // MARK: - Identity panel
@@ -377,8 +236,6 @@ struct IDView: View {
                         #if canImport(UIKit)
                         UIPasteboard.general.string = identityCommitment
                         #endif
-                        proofStatus = "Copied"
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proofStatus = nil }
                     } label: {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
@@ -408,44 +265,6 @@ struct IDView: View {
             }
         }
         .padding(.horizontal)
-    }
-
-    private func verifyProofAction() {
-        let proof: String
-        if isEditingProof {
-            proof = proofDraft
-        } else {
-            guard let p = latestProof else { return }
-            proof = p
-        }
-        if isWorking { return }
-        if !SemaphoreIdentityManager.proofsSupported {
-            proofStatus = "Verification not available"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-            return
-        }
-        isWorking = true
-        proofStatus = "Verifying..."
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let ok = try idm.verifyProof(proof)
-                print("[Semaphore] Verify result: \(ok)")
-                DispatchQueue.main.async {
-                    proofStatus = ok ? "Proof valid" : "Proof invalid"
-                    isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proofStatus = nil }
-                }
-            } catch {
-                print("[Semaphore] Verify error: \(error)")
-                DispatchQueue.main.async {
-                    errorMessage = error.localizedDescription
-                    showErrorAlert = true
-                    proofStatus = "Error: \(error.localizedDescription)"
-                    isWorking = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { proofStatus = nil }
-                }
-            }
-        }
     }
 }
 
@@ -520,27 +339,4 @@ private struct CreateGroupSheet: View {
     }
 }
 
-// MARK: - ZK stylized badge
-
-private struct ZKBadge: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(
-                    LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-            Text("ZK")
-                .font(.headline.weight(.bold))
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-        }
-        .frame(width: 34, height: 28)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-        )
-        .accessibilityLabel("ZK Settings")
-    }
-}
-
-
+ 

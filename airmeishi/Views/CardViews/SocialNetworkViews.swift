@@ -39,28 +39,46 @@ struct SocialNetworkRowView: View {
 
 struct SocialNetworkFormView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @Binding var platform: SocialPlatform
     @Binding var username: String
     @Binding var url: String
-    
+
     let onSave: (SocialNetwork) -> Void
-    
+
+    @State private var localPlatform: SocialPlatform
+    @State private var localUsername: String
+    @State private var localUrl: String
+
+    init(platform: Binding<SocialPlatform>, username: Binding<String>, url: Binding<String>, onSave: @escaping (SocialNetwork) -> Void) {
+
+        self._platform = platform
+        self._username = username
+        self._url = url
+        self.onSave = onSave
+        self._localPlatform = State(initialValue: platform.wrappedValue)
+        self._localUsername = State(initialValue: username.wrappedValue)
+        self._localUrl = State(initialValue: url.wrappedValue)
+
+    }
+
     var body: some View {
         NavigationView {
             Form {
                 Section {
-                    Picker("Platform", selection: $platform) {
+                    Picker("Platform", selection: $localPlatform) {
                         ForEach(SocialPlatform.allCases, id: \.self) { platform in
                             Text(platform.rawValue).tag(platform)
                         }
                     }
-                    
-                    TextField("Username", text: $username)
+
+                    TextField("Username", text: $localUsername)
                         .textInputAutocapitalization(.never)
-                    
-                    TextField("URL (optional)", text: $url)
+                        .autocorrectionDisabled()
+
+                    TextField("URL (optional)", text: $localUrl)
                         .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         .keyboardType(.URL)
                 } header: {
                     Text("Social Network Details")
@@ -74,7 +92,7 @@ struct SocialNetworkFormView: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
                         saveSocialNetwork()
@@ -82,23 +100,32 @@ struct SocialNetworkFormView: View {
                     .disabled(!isFormValid)
                 }
             }
+            .onAppear {
+            }
+        }
+        .onAppear {
         }
     }
     
     private var isFormValid: Bool {
-        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !localUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     private func saveSocialNetwork() {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+        let trimmedUsername = localUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUrl = localUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Update bindings
+        platform = localPlatform
+        username = trimmedUsername
+        url = trimmedUrl
+
         let social = SocialNetwork(
-            platform: platform,
+            platform: localPlatform,
             username: trimmedUsername,
             url: trimmedUrl.isEmpty ? nil : trimmedUrl
         )
-        
+
         onSave(social)
         dismiss()
     }

@@ -7,20 +7,29 @@
 
 import SwiftUI
 import PassKit
+import UIKit
 
 /// Apple Wallet pass generation and management view
 struct WalletPassGenerationView: View {
     let businessCard: BusinessCard
     let sharingLevel: SharingLevel
-    
+
     @StateObject private var passKitManager = PassKitManager.shared
     @State private var showingAddToWallet = false
     @State private var generatedPassData: Data?
     @State private var generatedPKPass: PKPass?
     @State private var showingError = false
     @State private var errorMessage = ""
-    
+    @State private var errorDetail = ""
+    @State private var importString: String = ""
+    @State private var showCopiedFeedback = false
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isIPad: Bool {
+        horizontalSizeClass == .regular
+    }
     
     var body: some View {
         NavigationView {
@@ -29,17 +38,19 @@ struct WalletPassGenerationView: View {
                     // Header
                     VStack(spacing: 12) {
                         Image(systemName: "wallet.pass")
-                            .font(.system(size: 60))
+                            .font(.system(size: isIPad ? 72 : 60))
                             .foregroundColor(.blue)
-                        
+                            .padding(.top, isIPad ? 20 : 0)
+
                         Text("Apple Wallet Pass")
-                            .font(.title2)
+                            .font(isIPad ? .title : .title2)
                             .fontWeight(.bold)
-                        
+
                         Text("Create a pass for Apple Wallet that contains your business card information")
-                            .font(.subheadline)
+                            .font(isIPad ? .body : .subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, isIPad ? 40 : 20)
                     }
                     .padding()
                     
@@ -62,6 +73,46 @@ struct WalletPassGenerationView: View {
                         .padding()
                     }
                     
+                    // Import string (name + job) for external apps
+                    if !importString.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Import String")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text("Deep link for importing contact data")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Text(importString)
+                                .font(.caption.monospaced())
+                                .textSelection(.enabled)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                                .padding(8)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(6)
+
+                            Button(action: copyImportString) {
+                                HStack {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copy Import String")
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(8)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+                    
                     // Action buttons
                     VStack(spacing: 12) {
                         if generatedPassData != nil {
@@ -71,10 +122,10 @@ struct WalletPassGenerationView: View {
                                     Text("Add to Apple Wallet")
                                 }
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(Color(.systemGray5))
                                 .cornerRadius(12)
                             }
                         } else {
@@ -84,15 +135,15 @@ struct WalletPassGenerationView: View {
                                     Text("Generate Pass")
                                 }
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(passKitManager.isGeneratingPass ? Color(.systemGray6) : Color(.systemGray5))
                                 .cornerRadius(12)
                             }
                             .disabled(passKitManager.isGeneratingPass)
                         }
-                        
+
                         Button("Cancel") {
                             dismiss()
                         }
@@ -104,7 +155,9 @@ struct WalletPassGenerationView: View {
                     // Information section
                     PassInformationView()
                 }
-                .padding()
+                .padding(isIPad ? 32 : 16)
+                .frame(maxWidth: isIPad ? 700 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("Wallet Pass")
             .navigationBarTitleDisplayMode(.inline)
@@ -116,47 +169,118 @@ struct WalletPassGenerationView: View {
                 }
             }
         }
-        .alert("Error", isPresented: $showingError) {
-            Button("OK") { }
+        .navigationViewStyle(.stack)
+        .alert("Unable to Create Pass", isPresented: $showingError) {
+            Button("OK") {
+                errorMessage = ""
+                errorDetail = ""
+            }
         } message: {
-            Text(errorMessage)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(errorMessage)
+                if !errorDetail.isEmpty {
+                    Text(errorDetail)
+                        .font(.caption)
+                }
+            }
         }
+        .overlay(
+            Group {
+                if showCopiedFeedback {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Copied to clipboard")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                        .padding()
+                        .background(Color.black.opacity(0.8))
+                        .cornerRadius(10)
+                        .padding(.bottom, 50)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut, value: showCopiedFeedback)
+                }
+            }
+        )
         .sheet(isPresented: $showingAddToWallet) {
             if let pass = generatedPKPass {
                 AddPassesControllerView(pass: pass)
             }
+        }
+        .onAppear {
+            // Precompute import string so users can copy even before generating pass
+            importString = passKitManager.generateImportString(for: businessCard, sharingLevel: sharingLevel)
         }
     }
     
     // MARK: - Private Methods
     
     private func generatePass() {
+        // Always compute import string alongside pass generation
+        importString = passKitManager.generateImportString(for: businessCard, sharingLevel: sharingLevel)
         let result = passKitManager.generatePass(
             for: businessCard,
             sharingLevel: sharingLevel
         )
-        
+
         switch result {
         case .success(let passData):
             generatedPassData = passData
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            // Parse error for better UX
+            let errorDesc = error.localizedDescription
+            if errorDesc.contains("certificate") || errorDesc.contains("trust chain") {
+                errorMessage = "Certificate verification failed"
+                errorDetail = "The pass signature could not be verified. Please check the server-side certificate configuration."
+            } else if errorDesc.contains("Server") || errorDesc.contains("network") {
+                errorMessage = "Network error"
+                errorDetail = "Unable to connect to signing service. Please check your internet connection."
+            } else {
+                errorMessage = errorDesc
+                errorDetail = ""
+            }
             showingError = true
         }
     }
     
     private func addToWallet() {
         guard let passData = generatedPassData else { return }
-        
+
         let result = passKitManager.addPassToWallet(passData)
-        
+
         switch result {
         case .success:
             generatedPKPass = passKitManager.lastGeneratedPass
             showingAddToWallet = generatedPKPass != nil
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            // Parse error for better UX
+            let errorDesc = error.localizedDescription
+            if errorDesc.contains("certificate") || errorDesc.contains("trust chain") || errorDesc.contains("passTypeIdentifier") || errorDesc.contains("teamIdentifier") {
+                errorMessage = "Pass verification failed"
+                errorDetail = "Apple Wallet could not verify this pass. The certificate may not match the Pass Type ID or Team ID in the pass data."
+            } else if errorDesc.contains("already exists") {
+                errorMessage = "Pass already in Wallet"
+                errorDetail = "This business card pass has already been added to your Apple Wallet."
+            } else {
+                errorMessage = errorDesc
+                errorDetail = ""
+            }
             showingError = true
+        }
+    }
+
+    private func copyImportString() {
+        UIPasteboard.general.string = importString
+
+        // Show feedback
+        showCopiedFeedback = true
+
+        // Hide after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showCopiedFeedback = false
         }
     }
 }
@@ -172,21 +296,21 @@ struct PassPreviewView: View {
             // Pass header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Airmeishi")
+                    Text("Solid(ar)ity")
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(.white)
-                    
+                        .foregroundStyle(.white)
+
                     Text("Business Card")
                         .font(.caption2)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.9))
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "person.crop.circle")
                     .font(.title2)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
             .padding()
             .background(
@@ -202,9 +326,10 @@ struct PassPreviewView: View {
                 // Primary field
                 VStack(alignment: .leading, spacing: 4) {
                     Text("NAME")
-                        .font(.caption2)
+                        .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                    
+
                     Text(businessCard.name)
                         .font(.title3)
                         .fontWeight(.bold)
@@ -215,52 +340,56 @@ struct PassPreviewView: View {
                     if let title = businessCard.title {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("TITLE")
-                                .font(.caption2)
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
-                            
+
                             Text(title)
                                 .font(.subheadline)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if let company = businessCard.company {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("COMPANY")
-                                .font(.caption2)
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
-                            
+
                             Text(company)
                                 .font(.subheadline)
                         }
                     }
                 }
-                
+
                 // Auxiliary fields
                 HStack {
                     if let email = businessCard.email {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("EMAIL")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Text(email)
                                 .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            Text(email)
+                                .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if let phone = businessCard.phone {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("PHONE")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Text(phone)
                                 .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            Text(phone)
+                                .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
                     }
@@ -277,11 +406,11 @@ struct PassPreviewView: View {
                             .overlay(
                                 Image(systemName: "qrcode")
                                     .font(.title)
-                                    .foregroundColor(.white)
+                                    .foregroundStyle(.white)
                             )
                         
                         Text("QR Code")
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     

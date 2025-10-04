@@ -16,11 +16,13 @@ struct BusinessCardListView: View {
     @State private var showingCreateCard = false
     @State private var showingOCRScanner = false
     @State private var featuredCard: BusinessCard?
+    @State private var cardToEdit: BusinessCard?
     @State private var isFeatured = false
     @State private var isSharing = false
     @State private var showingAppearance = false
     @State private var showingAddPass = false
     @State private var pendingPass: PKPass?
+    @State private var pendingPassCard: BusinessCard?
     @State private var alertMessage: String?
     @State private var draggedCard: BusinessCard?
     @State private var dragOffset: CGSize = .zero
@@ -35,7 +37,15 @@ struct BusinessCardListView: View {
                     ProgressView("Loading cards...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if cardManager.businessCards.isEmpty {
-                    EmptyWalletView(onCreate: { featuredCard = nil; showingCreateCard = true }, onScan: { showingOCRScanner = true })
+                    EmptyWalletView(
+                        onCreate: {
+                            featuredCard = nil
+                            DispatchQueue.main.async {
+                                showingCreateCard = true
+                            }
+                        },
+                        onScan: { showingOCRScanner = true }
+                    )
                 } else {
                     makeStack()
                 }
@@ -44,24 +54,59 @@ struct BusinessCardListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("Create Card") { featuredCard = nil; showingCreateCard = true }
-                        Button("Scan Card") { showingOCRScanner = true }
-                        Button("Appearance") { showingAppearance = true }
-                    } label: { Image(systemName: "plus") }
+                        Button(action: {
+                            featuredCard = nil
+                            DispatchQueue.main.async {
+                                showingCreateCard = true
+                            }
+                        }) {
+                            Label("Create Card", systemImage: "plus.circle.fill")
+                        }
+                        Button(action: { showingOCRScanner = true }) {
+                            Label("Scan Card", systemImage: "camera.fill")
+                        }
+                        Divider()
+                        Button(action: { showingAppearance = true }) {
+                            Label("Appearance", systemImage: "paintbrush.fill")
+                        }
+                    } label: {
+                        // Black & white style button
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                            Text("Add")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color.black)
+                                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
+                    }
                 }
             }
             .sheet(isPresented: $showingCreateCard) {
-                // If featuredCard is nil, we are creating. Otherwise we are editing the selected card.
-                BusinessCardFormView(businessCard: featuredCard, forceCreate: featuredCard == nil) { saved in
-                    // Keep focus on updated card
+                // Create mode: always nil businessCard, always forceCreate
+                BusinessCardFormView(businessCard: nil, forceCreate: true) { saved in
                     featuredCard = saved
+                }
+            }
+            .sheet(item: $cardToEdit) { card in
+                BusinessCardFormView(businessCard: card, forceCreate: false) { saved in
+                    featuredCard = saved
+                    cardToEdit = nil
                 }
             }
             .sheet(isPresented: $showingOCRScanner) {
                 OCRScannerView { extracted in
                     featuredCard = extracted
                     isFeatured = true
-                    showingCreateCard = true
+                    DispatchQueue.main.async {
+                        showingCreateCard = true
+                    }
                 }
             }
             .sheet(isPresented: $showingAppearance) {
@@ -69,8 +114,38 @@ struct BusinessCardListView: View {
                     .environmentObject(theme)
             }
             .sheet(isPresented: $showingAddPass) {
-                if let pass = pendingPass {
-                    AddPassesControllerView(pass: pass)
+                ZStack {
+                    Color.black.ignoresSafeArea()
+
+                    if let pass = pendingPass {
+                        AddPassesControllerView(pass: pass)
+                    } else {
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.5)
+
+                            Text("Preparing Wallet Pass...")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .onAppear {
+                    // Auto-generate pass when sheet appears if not already generated
+                    if pendingPass == nil, let card = pendingPassCard {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            generatePassFor(card)
+                        }
+                    }
+                }
+                .onDisappear {
+                    // Clear pass when sheet is dismissed
+                    pendingPass = nil
+                    pendingPassCard = nil
                 }
             }
             .alert("Error", isPresented: .init(get: { alertMessage != nil }, set: { _ in alertMessage = nil })) {
@@ -140,6 +215,10 @@ private extension BusinessCardListView {
         proximityManager.startAdvertising(with: card, sharingLevel: .professional)
     }
     func handleFocus(_ card: BusinessCard) {
+        // Add haptic feedback for better UX
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
             featuredCard = card
             isFeatured = true
@@ -162,24 +241,39 @@ private extension BusinessCardListView {
 
 
     func beginEdit(_ card: BusinessCard) {
-        featuredCard = card
-        showingCreateCard = true
+        // Add haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+
+        // Close focused view if open
+        isFeatured = false
+
+        // Set cardToEdit - this will automatically trigger the sheet(item:)
+        cardToEdit = card
     }
     
     func addToWallet(_ card: BusinessCard) {
+        // Store the card and show sheet (will auto-generate on appear)
+        pendingPassCard = card
+        pendingPass = nil
+        showingAddPass = true
+    }
+
+    func generatePassFor(_ card: BusinessCard) {
         let result = PassKitManager.shared.generatePass(for: card, sharingLevel: .professional)
         switch result {
         case .success(let passData):
-            // Create PKPass and present add UI
+            // Create PKPass and update UI
             do {
                 let pass = try PKPass(data: passData)
                 pendingPass = pass
-                showingAddPass = true
             } catch {
                 alertMessage = "Failed to prepare Wallet pass: \(error.localizedDescription)"
+                showingAddPass = false
             }
         case .failure(let err):
             alertMessage = err.localizedDescription
+            showingAddPass = false
         }
     }
     
@@ -301,8 +395,9 @@ private struct WalletCardView: View {
     let card: BusinessCard
     var onEdit: () -> Void
     var onAddToWallet: () -> Void
-    
+
     @State private var isFlipped = false
+    @State private var editAttempted = false
     @EnvironmentObject private var theme: ThemeManager
     
     var body: some View {
@@ -367,37 +462,54 @@ private struct WalletCardView: View {
                 .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isFlipped)
                 .cardGlow(theme.cardAccent, enabled: theme.enableGlow)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 CategoryTag(text: category(for: card))
                 Button(action: editTapped) {
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.black)
-                        .padding(8)
+                        .frame(width: 44, height: 44)
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(10)
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .contentShape(Rectangle())
+
                 Button(action: addPassTapped) {
                     Image(systemName: "wallet.pass")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.black)
-                        .padding(8)
+                        .frame(width: 44, height: 44)
                         .background(theme.cardAccent.opacity(0.12))
                         .clipShape(Circle())
                 }
-                .padding(10)
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .contentShape(Rectangle())
             }
+            .allowsHitTesting(true)
         }
     }
     
     private func editTapped() {
+        // Prevent multiple rapid taps
+        guard !editAttempted else { return }
+        editAttempted = true
+
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
-        withAnimation { isFlipped = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            withAnimation { isFlipped = false }
-            onEdit()
+
+        // Directly open edit without flip animation to avoid gray screen
+        onEdit()
+
+        // Reset after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            editAttempted = false
         }
     }
     
@@ -462,16 +574,74 @@ private struct CategoryTag: View {
 private struct EmptyWalletView: View {
     let onCreate: () -> Void
     let onScan: () -> Void
-    
+
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.crop.rectangle").font(.system(size: 64)).foregroundColor(.secondary)
-            Text("Business Card Not Found").font(.title2).bold().foregroundColor(.primary)
-            Text("Add a card or scan to get started").foregroundColor(.secondary)
-            HStack(spacing: 12) {
-                Button("Add Card", action: onCreate).buttonStyle(.borderedProminent)
-                Button("Scan Card", action: onScan).buttonStyle(.bordered).foregroundColor(.gray)
+        VStack(spacing: 32) {
+            // Animated icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .blur(radius: 20)
+
+                Image(systemName: "person.crop.rectangle.stack")
+                    .font(.system(size: 64, weight: .light))
+                    .foregroundColor(.white.opacity(0.9))
             }
+
+            VStack(spacing: 12) {
+                Text("No Business Cards")
+                    .font(.title.bold())
+                    .foregroundColor(.white)
+
+                Text("Create your first card or scan one to get started")
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            VStack(spacing: 16) {
+                Button(action: onCreate) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                        Text("Create New Card")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                }
+
+                Button(action: onScan) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "camera.fill")
+                            .font(.title3)
+                        Text("Scan Business Card")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                    )
+                }
+            }
+            .padding(.horizontal, 32)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

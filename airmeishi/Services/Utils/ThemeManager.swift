@@ -85,6 +85,78 @@ extension Color {
     }
 }
 
+// MARK: - Semantic Colors Extension
+
+extension Color {
+    /// Semantic colors that adapt to light/dark mode
+    struct Theme {
+        // Primary action color - adapts to theme
+        static var primaryAction: Color {
+            Color.accentColor
+        }
+
+        // Secondary action color
+        static var secondaryAction: Color {
+            Color(.systemGray)
+        }
+
+        // Button text on colored backgrounds
+        static var buttonText: Color {
+            Color.white
+        }
+
+        // Primary text that works in both modes
+        static var primaryText: Color {
+            Color.primary
+        }
+
+        // Secondary text
+        static var secondaryText: Color {
+            Color.secondary
+        }
+
+        // Toolbar and navigation button text
+        static var toolbarButton: Color {
+            Color.accentColor
+        }
+
+        // Success/positive color
+        static var success: Color {
+            Color.green
+        }
+
+        // Warning color
+        static var warning: Color {
+            Color.orange
+        }
+
+        // Danger/destructive color
+        static var danger: Color {
+            Color.red
+        }
+
+        // Lightning accent for special features
+        static var lightning: Color {
+            Color.yellow
+        }
+
+        // Card background
+        static var cardBackground: Color {
+            Color(.systemBackground)
+        }
+
+        // Secondary background
+        static var secondaryBackground: Color {
+            Color(.secondarySystemBackground)
+        }
+
+        // Grouped background
+        static var groupedBackground: Color {
+            Color(.systemGroupedBackground)
+        }
+    }
+}
+
 // MARK: - View helpers
 
 extension View {

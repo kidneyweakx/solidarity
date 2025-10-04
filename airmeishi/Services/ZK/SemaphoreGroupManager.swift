@@ -176,6 +176,34 @@ final class SemaphoreGroupManager: ObservableObject {
         }
     }
 
+    /// Delete a group by id and clean up associated resources
+    func deleteGroup(_ id: UUID) {
+        onMain { [weak self] in
+            guard let self = self else { return }
+            guard let index = self.allGroups.firstIndex(where: { $0.id == id }) else { return }
+
+            // Attempt to delete any associated group card
+            if case .success(let cards) = CardManager.shared.getAllCards() {
+                if let card = cards.first(where: { $0.categories.contains("group_card") && $0.categories.contains("group:\(id.uuidString)") }) {
+                    _ = CardManager.shared.deleteCard(id: card.id)
+                }
+            }
+
+            self.allGroups.remove(at: index)
+            if self.selectedGroupId == id {
+                self.selectedGroupId = self.allGroups.first?.id
+            }
+            self.applySelectedToPublished()
+        }
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.save() }
+    }
+
+    /// Convenience to delete currently selected group
+    func deleteSelectedGroup() {
+        guard let gid = selectedGroupId else { return }
+        deleteGroup(gid)
+    }
+
     private func updateRootForGroup(at index: Int) {
         self.allGroups[index].root = computePseudoRoot(for: self.allGroups[index])
     }

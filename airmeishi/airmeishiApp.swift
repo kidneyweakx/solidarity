@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PassKit
+import Foundation
 
 @main
 struct airmeishiApp: App {
@@ -16,7 +17,6 @@ struct airmeishiApp: App {
     @StateObject private var proximityManager = ProximityManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
     @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var web3auth = Web3AuthManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -65,12 +65,25 @@ struct airmeishiApp: App {
     
     /// Handle incoming URLs from various sources
     private func handleIncomingURL(_ url: URL) {
-        print("App received URL: \(url)")
+        print("🔗 [App] Received URL: \(url)")
+        print("🔗 [App] URL scheme: \(url.scheme ?? "nil")")
+        print("🔗 [App] URL host: \(url.host ?? "nil")")
+        print("🔗 [App] URL path: \(url.path)")
+        print("🔗 [App] URL query: \(url.query ?? "nil")")
+        print("🔗 [App] URL absoluteString: \(url.absoluteString)")
         
-        let handled = deepLinkManager.handleIncomingURL(url) || web3auth.handleURL(url)
+        // Coinbase handling removed; rely on app deep link handling
+        print("🔗 [App] Attempting DeepLinkManager handling...")
+        let handledByDeepLink = deepLinkManager.handleIncomingURL(url)
+        print("🔗 [App] DeepLinkManager result: \(handledByDeepLink)")
+        
+        let handled = handledByDeepLink
+        print("🔗 [App] Overall handled: \(handled)")
         
         if !handled {
-            print("Failed to handle URL: \(url)")
+            print("❌ [App] Failed to handle URL: \(url)")
+        } else {
+            print("✅ [App] Successfully handled URL: \(url)")
         }
     }
     

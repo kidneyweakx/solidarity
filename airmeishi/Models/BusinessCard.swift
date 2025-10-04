@@ -111,11 +111,11 @@ enum SocialPlatform: String, Codable, CaseIterable {
     
     var icon: String {
         switch self {
-        case .linkedin: return "linkedin"
-        case .twitter: return "twitter"
-        case .instagram: return "instagram"
-        case .facebook: return "facebook"
-        case .github: return "github"
+        case .linkedin: return "link"
+        case .twitter: return "at"
+        case .instagram: return "camera"
+        case .facebook: return "person.2"
+        case .github: return "curlybraces.square"
         case .website: return "globe"
         case .other: return "link"
         }

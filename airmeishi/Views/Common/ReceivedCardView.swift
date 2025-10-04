@@ -3,7 +3,7 @@ import SwiftUI
 struct ReceivedCardView: View {
     let card: BusinessCard
     @Environment(\.dismiss) private var dismiss
-    @State private var isLightningAnimating = false
+    @State private var isLighteningAnimating = false
     @State private var showingShoutoutGallery = false
     @State private var isSaved = false
     @State private var showingSaveConfirmation = false
@@ -27,10 +27,10 @@ struct ReceivedCardView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Lightning success indicator
+                        // Lightening success indicator
                         VStack(spacing: 16) {
                             ZStack {
-                                // Lightning ring
+                                // Lightening ring
                                 Circle()
                                     .stroke(
                                         LinearGradient(
@@ -41,24 +41,24 @@ struct ReceivedCardView: View {
                                         lineWidth: 4
                                     )
                                     .frame(width: 100, height: 100)
-                                    .scaleEffect(isLightningAnimating ? 1.1 : 1.0)
+                                    .scaleEffect(isLighteningAnimating ? 1.1 : 1.0)
                                     .animation(
                                         .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                                        value: isLightningAnimating
+                                        value: isLighteningAnimating
                                     )
                                 
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 40))
                                     .foregroundColor(.yellow)
-                                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                                     .animation(
                                         .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                                        value: isLightningAnimating
+                                        value: isLighteningAnimating
                                     )
                             }
                             
                             VStack(spacing: 8) {
-                                Text("Lightning Card Received! ⚡")
+                                Text("Lightening Card Received! ⚡")
                                     .font(.title)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
@@ -83,10 +83,10 @@ struct ReceivedCardView: View {
                                 Image(systemName: "bolt.circle.fill")
                                     .foregroundColor(.yellow)
                                     .font(.title2)
-                                    .scaleEffect(isLightningAnimating ? 1.2 : 1.0)
+                                    .scaleEffect(isLighteningAnimating ? 1.2 : 1.0)
                                     .animation(
                                         .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
-                                        value: isLightningAnimating
+                                        value: isLighteningAnimating
                                     )
                             }
                             
@@ -139,17 +139,17 @@ struct ReceivedCardView: View {
                                 )
                         )
                         
-                        // Lightning action buttons
+                        // Lightening action buttons
                         VStack(spacing: 12) {
                             if !isSaved {
                                 Button(action: saveCard) {
                                     HStack(spacing: 12) {
                                         Image(systemName: "square.and.arrow.down")
                                             .font(.title2)
-                                            .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                                            .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                                             .animation(
                                                 .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                                                value: isLightningAnimating
+                                                value: isLighteningAnimating
                                             )
                                         
                                         Text("Save to Contacts")
@@ -176,13 +176,13 @@ struct ReceivedCardView: View {
                                     HStack(spacing: 12) {
                                         Image(systemName: "bolt.fill")
                                             .font(.title2)
-                                            .scaleEffect(isLightningAnimating ? 1.3 : 1.0)
+                                            .scaleEffect(isLighteningAnimating ? 1.3 : 1.0)
                                             .animation(
                                                 .easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                                                value: isLightningAnimating
+                                                value: isLighteningAnimating
                                             )
                                         
-                                        Text("View in Lightning Gallery")
+                                        Text("View in Lightening Gallery")
                                             .font(.headline)
                                             .fontWeight(.bold)
                                     }
@@ -230,18 +230,17 @@ struct ReceivedCardView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Lightning Received")
+            .navigationTitle("Lightening Received")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(.white)
                 }
             }
             .onAppear {
-                isLightningAnimating = true
+                isLighteningAnimating = true
             }
             .sheet(isPresented: $showingShoutoutGallery) {
                 ShoutoutView()

@@ -13,8 +13,9 @@ import AVFoundation
 
 struct OCRScannerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var ocrManager = OCRManager()
-    
+
     @State private var showingLanguageSelection = true
     @State private var selectedLanguage: ScanLanguage = .english
     @State private var showingCamera = false
@@ -27,29 +28,37 @@ struct OCRScannerView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var showSettingsButton = false
-    
+
     let onCardExtracted: (BusinessCard) -> Void
+
+    private var isIPad: Bool {
+        horizontalSizeClass == .regular
+    }
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                if showingLanguageSelection {
-                    languageSelectionSection
-                } else if let image = capturedImage {
-                    imagePreviewSection(image)
-                } else {
-                    scanningOptionsSection
+            ScrollView {
+                VStack(spacing: 20) {
+                    if showingLanguageSelection {
+                        languageSelectionSection
+                    } else if let image = capturedImage {
+                        imagePreviewSection(image)
+                    } else {
+                        scanningOptionsSection
+                    }
+
+                    if isProcessing {
+                        processingSection
+                    } else if let card = extractedCard {
+                        extractedDataSection(card)
+                    }
+
+                    Spacer(minLength: 40)
                 }
-                
-                if isProcessing {
-                    processingSection
-                } else if let card = extractedCard {
-                    extractedDataSection(card)
-                }
-                
-                Spacer()
+                .padding(isIPad ? 32 : 20)
+                .frame(maxWidth: isIPad ? 600 : .infinity)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
             .navigationTitle("Scan Business Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -58,7 +67,7 @@ struct OCRScannerView: View {
                         dismiss()
                     }
                 }
-                
+
                 if extractedCard != nil {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Use Data") {
@@ -95,26 +104,31 @@ struct OCRScannerView: View {
                 Text(alertMessage)
             }
         }
+        .navigationViewStyle(.stack)
     }
     
     // MARK: - View Sections
     
     private var languageSelectionSection: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 28) {
             Image(systemName: "globe")
-                .font(.system(size: 60))
+                .font(.system(size: 64))
                 .foregroundColor(.blue)
-            
-            Text("Select Language")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Choose the language of the business card you want to scan")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            VStack(spacing: 12) {
+                .padding(.top, 20)
+
+            VStack(spacing: 8) {
+                Text("Select Language")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Text("Choose the language of the business card you want to scan")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            VStack(spacing: 14) {
                 ForEach(ScanLanguage.allCases) { language in
                     LanguageOptionView(
                         language: language,
@@ -124,14 +138,21 @@ struct OCRScannerView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
+
             Button("Continue") {
                 showingLanguageSelection = false
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.accentColor)
-            .padding(.top, 20)
+            .font(.headline)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 20)
         }
     }
     
@@ -158,13 +179,14 @@ struct OCRScannerView: View {
                         Image(systemName: "camera")
                         Text("Take Photo")
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
+                    .font(.headline)
                     .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                
+
                 Button(action: {
                     showingImagePicker = true
                 }) {
@@ -172,11 +194,16 @@ struct OCRScannerView: View {
                         Image(systemName: "photo")
                         Text("Choose from Photos")
                     }
+                    .font(.headline)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .foregroundColor(.primary)
-                    .cornerRadius(10)
+                    .padding(.vertical, 16)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                    )
                 }
             }
         }
@@ -369,7 +396,7 @@ struct ExtractedFieldView: View {
 
 struct ConfidenceBadge: View {
     let confidence: Float
-    
+
     var body: some View {
         let percentage = Int(confidence * 100)
         let color: Color = {
@@ -377,15 +404,15 @@ struct ConfidenceBadge: View {
             else if confidence >= 0.6 { return .orange }
             else { return .red }
         }()
-        
+
         Text("\(percentage)%")
-            .font(.caption2)
-            .fontWeight(.medium)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .font(.caption)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(color.opacity(0.2))
             .foregroundColor(color)
-            .cornerRadius(4)
+            .cornerRadius(6)
     }
 }
 
